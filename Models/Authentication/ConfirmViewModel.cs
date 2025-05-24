@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace SwiftSpecBuild.Models
+namespace SwiftSpecBuild.Models.Authentication
 {
     public class ConfirmViewModel
     {

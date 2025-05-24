@@ -5,7 +5,7 @@ using Amazon;
 using Amazon.CognitoIdentityProvider;
 using Amazon.CognitoIdentityProvider.Model;
 using Microsoft.AspNetCore.Mvc;
-using SwiftSpecBuild.Models;
+using SwiftSpecBuild.Models.Authentication;
 
 namespace SwiftSpecBuild.Controllers.Authentication
 {
@@ -95,7 +95,7 @@ namespace SwiftSpecBuild.Controllers.Authentication
             try
             {
                 var result = await _provider.ConfirmSignUpAsync(request);
-              //  TempData["Message"] = "Email confirmed successfully. You can now log in.";
+                TempData["Message"] = "Email confirmed successfully. You can now log in.";
                 return RedirectToAction("Login");
             }
             catch (Exception ex)
@@ -126,7 +126,7 @@ namespace SwiftSpecBuild.Controllers.Authentication
             {
                 var response = await _provider.InitiateAuthAsync(request);            
                 HttpContext.Response.Cookies.Append("AuthToken", response.AuthenticationResult.IdToken);     
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction("Upload", "Yaml");
             }
             catch (NotAuthorizedException)
             {

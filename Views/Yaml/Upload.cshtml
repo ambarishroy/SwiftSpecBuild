@@ -1,0 +1,48 @@
+﻿@model YAMLUploadViewModel
+@{
+    ViewData["Title"] = "Upload YAML File";
+
+    bool isAuthenticated = Context.Request.Cookies["AuthToken"] != null;
+}
+
+<div class="container mt-5" style="max-width: 600px;">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h3 class="card-title text-center mb-4">Upload Your API Specification</h3>
+
+            @if (TempData["Message"] != null)
+            {
+                <div class="alert alert-info text-center">@TempData["Message"]</div>
+            }
+
+            @using (Html.BeginForm("Upload", "Yaml", FormMethod.Post, new { enctype = "multipart/form-data" }))
+            {
+                <div class="form-group mb-3">
+                    @Html.LabelFor(m => m.File, new { @class = "form-label" })
+                    @Html.TextBoxFor(m => m.File, new { type = "file", @class = "form-control", accept = ".yaml,.yml" })
+                    @Html.ValidationMessageFor(m => m.File, "", new { @class = "text-danger" })
+                </div>
+
+                <div class="d-grid mb-3">
+                    <button type="submit" class="btn btn-primary" @(isAuthenticated ? "" : "disabled")>
+                        Upload YAML
+                    </button>
+                </div>
+            }
+
+            @if (!isAuthenticated)
+            {
+                <div class="text-center text-muted small">
+                    You must be logged in to upload a file.
+                    <a href="@Url.Action("Login", "Registration")">Login here</a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.3/dist/jquery.validate.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery-validation-unobtrusive@3.2.12/jquery.validate.unobtrusive.min.js"></script>
+}

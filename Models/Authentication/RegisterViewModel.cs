@@ -1,23 +1,22 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace SwiftSpecBuild.Models
+namespace SwiftSpecBuild.Models.Authentication
 {
-    public class ResetPasswordViewModel
+    public class RegisterViewModel
     {
         [Required]
         [EmailAddress]
         public string Email { get; set; }
 
         [Required]
-        public string Code { get; set; }
-
-        [Required]
+        [MinLength(6)]
         [DataType(DataType.Password)]
-        public string NewPassword { get; set; }
+        public string Password { get; set; }
 
         [Required]
-        [Compare("NewPassword")]
+        [Compare("Password")]
         [DataType(DataType.Password)]
         public string ConfirmPassword { get; set; }
+
     }
 }
