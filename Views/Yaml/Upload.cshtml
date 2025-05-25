@@ -2,7 +2,7 @@
 @{
     ViewData["Title"] = "Upload YAML File";
 
-    bool isAuthenticated = Context.Request.Cookies["AuthToken"] != null;
+   
 }
 
 <div class="container mt-5" style="max-width: 600px;">
@@ -24,19 +24,20 @@
                 </div>
 
                 <div class="d-grid mb-3">
-                    <button type="submit" class="btn btn-primary" @(isAuthenticated ? "" : "disabled")>
+                    <button type="submit" class="btn btn-primary">
                         Upload YAML
                     </button>
                 </div>
             }
 
-            @if (!isAuthenticated)
+            @if (!User.Identity.IsAuthenticated)
             {
                 <div class="text-center text-muted small">
                     You must be logged in to upload a file.
                     <a href="@Url.Action("Login", "Registration")">Login here</a>
                 </div>
             }
+
         </div>
     </div>
 </div>
