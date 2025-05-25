@@ -1,6 +1,8 @@
+using System.Security.Claims;
 using Amazon.CognitoIdentityProvider;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using SwiftSpecBuild.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 var userPoolId = "eu-west-1_bk8cS7E2C";
@@ -17,8 +19,9 @@ builder.Services.AddAuthentication(options =>
         {
             ValidateIssuer = true,
             ValidIssuer = $"https://cognito-idp.{region}.amazonaws.com/{userPoolId}",
-            ValidateAudience = false, // set to true if you're verifying App Client ID
-            ValidateLifetime = true
+            ValidateAudience = false, 
+            ValidateLifetime = true,
+            NameClaimType = ClaimTypes.Email
         };
 
         options.Events = new JwtBearerEvents
@@ -38,6 +41,10 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
 // Register AWS SDK services
 builder.Services.AddAWSService<IAmazonCognitoIdentityProvider>();
+builder.Services.AddAWSService<Amazon.S3.IAmazonS3>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient<S3Client>();
+
 builder.Services.AddAuthorization();
 builder.Services.AddControllersWithViews();
 
