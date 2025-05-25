@@ -4,7 +4,7 @@ using SwiftSpecBuild.Models;
 
 namespace SwiftSpecBuild.Controllers
 {
-    [Authorize]
+    [AllowAnonymous]
     public class YamlController : Controller
     {
         [HttpGet]
@@ -18,7 +18,12 @@ namespace SwiftSpecBuild.Controllers
         {
             System.Diagnostics.Debug.WriteLine("User.Identity.IsAuthenticated: " + User.Identity.IsAuthenticated);
             Console.WriteLine("User.Identity.Name: " + User.Identity.Name);
-
+            
+            if (!User.Identity.IsAuthenticated)
+            {
+                return RedirectToAction("Login", "Registration");
+               
+            }
             if (!ModelState.IsValid)
             {
                 return View(model);
