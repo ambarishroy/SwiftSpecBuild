@@ -95,13 +95,16 @@ namespace SwiftSpecBuild.Controllers
                 var rawEndPoints = YamlParser.ExtractCrudEndpoints(tempFilePath);
                 var parsedEndpoints = ParsedEndpointBuilder.FromYaml(tempFilePath);
 
-                var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "GeneratedApp");
+                var outputPath = Path.Combine(Path.GetTempPath(), $"GeneratedWebApp_{Guid.NewGuid()}");
+
                 var generator = new GenerateWebApp(outputPath);
                 string zipFilePath = generator.GenerateAndZip(parsedEndpoints);
-
-                
                
-                bool appGenerated = rawEndPoints.Count > 0; // to be changed ambarish
+
+
+
+
+                bool appGenerated = rawEndPoints.Count > 0; 
                 if (appGenerated)
                 {
                     
