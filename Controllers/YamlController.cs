@@ -95,10 +95,16 @@ namespace SwiftSpecBuild.Controllers
                 var rawEndPoints = YamlParser.ExtractCrudEndpoints(tempFilePath);
                 var parsedEndpoints = ParsedEndpointBuilder.FromYaml(tempFilePath);
 
-                // TODO: Generate web app (stubbed for now)
+                var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "GeneratedApp");
+                var generator = new GenerateWebApp(outputPath);
+                string zipFilePath = generator.GenerateAndZip(parsedEndpoints);
+
+                
+               
                 bool appGenerated = rawEndPoints.Count > 0; // to be changed ambarish
                 if (appGenerated)
                 {
+                    
                     // overwrite yaml to s3
                     using var uploadStream = new FileStream(tempFilePath, FileMode.Open, FileAccess.Read);
                     var putRequest = new PutObjectRequest
@@ -110,7 +116,8 @@ namespace SwiftSpecBuild.Controllers
                     };
                     await s3.PutObjectAsync(putRequest);
 
-                    TempData["Message"] = "New endpoints parsed and YAML uploaded.";
+                    TempData["Message"] = "YAML uploaded and project generation complete!";
+                    return PhysicalFile(zipFilePath, "application/zip", "GeneratedWebApp.zip");
                 }
                 else
                 {
