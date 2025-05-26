@@ -7,7 +7,7 @@ using SwiftSpecBuild.Services;
 
 namespace SwiftSpecBuild.Controllers
 {
-    [Authorize]
+    [AllowAnonymous]
     public class YamlController : Controller
     {
         [HttpGet]
@@ -47,14 +47,29 @@ namespace SwiftSpecBuild.Controllers
                            User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value ?? "anonymous";
                          
             var s3Key = $"{userEmail}/{fileName}";
-            var tempFilePath = Path.GetTempFileName();
+            var tempFilePath = Path.GetRandomFileName();
 
             using (var stream = new FileStream(tempFilePath, FileMode.Create))
             {
                 await model.File.CopyToAsync(stream);
             }
 
-            var existingFilePath = Path.GetTempFileName();
+            // Validate YAML format
+            try
+            {
+                using var reader = new StreamReader(tempFilePath);
+                var yaml = new YamlDotNet.RepresentationModel.YamlStream();
+                yaml.Load(reader);
+            }
+            catch (Exception ex)
+            {
+                System.IO.File.Delete(tempFilePath);
+                TempData["Message"] = $"Invalid YAML format: {ex.Message}";
+                return RedirectToAction("Upload");
+            }
+
+
+            var existingFilePath = Path.GetRandomFileName();
             bool existsInS3 = false;
 
             try
