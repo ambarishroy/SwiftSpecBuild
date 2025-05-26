@@ -197,7 +197,7 @@ public class HomeController : Controller
             lines.Add("}");
             return string.Join(Environment.NewLine, lines);
         }
-
+        //
         private string GenerateView(string modelName, ParsedEndpoint ep)
         {
             var lines = new List<string>
