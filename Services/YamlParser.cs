@@ -47,7 +47,7 @@ namespace SwiftSpecBuild.Services
                     {
                         var method = ((YamlScalarNode)methodEntry.Key).Value?.ToUpperInvariant();
 
-                        if (method is "GET" or "POST" or "PUT" or "DELETE")
+                        if (method is "GET" or "POST" or "PUT" or "DELETE" or "PATCH")
                         {
                             var endpoint = new Endpoint
                             {

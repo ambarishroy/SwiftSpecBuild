@@ -92,12 +92,14 @@ namespace SwiftSpecBuild.Controllers
             if (isNewOrChanged)
             {
                 // Parse endpoints
-                var endpoints = YamlParser.ExtractCrudEndpoints(tempFilePath);
+                var rawEndPoints = YamlParser.ExtractCrudEndpoints(tempFilePath);
+                var parsedEndpoints = ParsedEndpointBuilder.FromYaml(tempFilePath);
+
                 // TODO: Generate web app (stubbed for now)
-                bool appGenerated = endpoints.Count > 0;
+                bool appGenerated = rawEndPoints.Count > 0; // to be changed ambarish
                 if (appGenerated)
                 {
-                    // Upload the new YAML to S3 (overwrite)
+                    // overwrite yaml to s3
                     using var uploadStream = new FileStream(tempFilePath, FileMode.Open, FileAccess.Read);
                     var putRequest = new PutObjectRequest
                     {
