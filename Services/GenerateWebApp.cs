@@ -107,13 +107,13 @@ namespace SwiftSpecBuild.Services
             File.WriteAllText(Path.Combine(_basePath, "appsettings.json"), "{ }");
 
             File.WriteAllText(Path.Combine(_basePath, "GeneratedWebApp.csproj"),
-                @"<Project Sdk=""Microsoft.NET.Sdk.Web"">
-              <PropertyGroup>
-                <TargetFramework>net8.0</TargetFramework>
-                <Nullable>enable</Nullable>
-                <ImplicitUsings>enable</ImplicitUsings>
-              </PropertyGroup>
-            </Project>");
+ @"<Project Sdk=""Microsoft.NET.Sdk.Web"">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+</Project>");
 
 
             string zipPath = Path.Combine(_basePath, "../GeneratedWebApp.zip");
@@ -153,39 +153,31 @@ namespace SwiftSpecBuild.Services
                 "{"
             };
 
-            string method = ep.HttpMethod.ToUpperInvariant();
             string action = className;
+            string paramList = string.Join(", ", ep.Parameters.Select(p => $"{MapType(p.Value)} {p.Key}"));
 
-            if (method == "GET" || method == "DELETE")
-            {
-                string paramList = string.Join(", ", ep.Parameters.Select(p => $"{MapType(p.Value)} {p.Key}"));
-                lines.Add($"    [Http{ToPascal(method.ToLower())}]");
+            // Always generate [HttpGet] view loader
+            lines.Add("    [HttpGet]");
+            lines.Add($"    public IActionResult {action}({paramList})");
+            lines.Add("    {");
+            foreach (var p in ep.Parameters.Keys)
+                lines.Add($"        ViewBag.{p} = {p};");
+            lines.Add("        return View();");
+            lines.Add("    }");
 
-                lines.Add($"    public IActionResult {action}({paramList})");
-                lines.Add("    {");
-                foreach (var p in ep.Parameters.Keys)
-                    lines.Add($"        ViewBag.{p} = {p};");
-                lines.Add("        return View();");
-                lines.Add("    }");
-            }
-            else
-            {
-                lines.Add($"    [HttpGet]");
-                lines.Add($"    public IActionResult {action}() => View();");
-                lines.Add("");
-                string paramList = string.Join(", ", ep.Parameters.Select(p => $"{MapType(p.Value)} {p.Key}"));
-                string allParams = string.IsNullOrEmpty(paramList) ? $"{modelName} model" : $"{paramList}, {modelName} model";
-                lines.Add($"    [Http{ToPascal(method.ToLower())}]");
-
-                lines.Add($"    public IActionResult {action}({allParams})");
-                lines.Add("    {");
-                lines.Add("        if (ModelState.IsValid)");
-                lines.Add("        {");
-                lines.Add("            return RedirectToAction(\"Success\", \"Home\");");
-                lines.Add("        }");
-                lines.Add("        return View(model);");
-                lines.Add("    }");
-            }
+            // Add method to handle the actual operation (simulate Submit)
+            lines.Add("");
+            string handlerAction = action + "Submit";
+            string allParams = string.IsNullOrEmpty(paramList) ? $"{modelName} model" : $"{paramList}, {modelName} model";
+            lines.Add($"    [HttpPost]");
+            lines.Add($"    public IActionResult {handlerAction}({allParams})");
+            lines.Add("    {");
+            lines.Add("        if (ModelState.IsValid)");
+            lines.Add("        {");
+            lines.Add("            return RedirectToAction(\"Success\", \"Home\");");
+            lines.Add("        }");
+            lines.Add("        return View(model);");
+            lines.Add("    }");
 
             lines.Add("}");
             return string.Join(Environment.NewLine, lines);
@@ -235,6 +227,5 @@ namespace SwiftSpecBuild.Services
             return string.Join("", input.Split(new[] { '_', '-', '/' }, StringSplitOptions.RemoveEmptyEntries)
                                         .Select(w => char.ToUpperInvariant(w[0]) + w.Substring(1).ToLower()));
         }
-
     }
 }
