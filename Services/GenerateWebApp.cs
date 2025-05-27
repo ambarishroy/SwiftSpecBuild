@@ -42,7 +42,7 @@ namespace SwiftSpecBuild.Services
 
                 File.WriteAllText(Path.Combine(modelsPath, modelName + ".cs"), GenerateModel(modelName, ep));
                 File.WriteAllText(Path.Combine(controllersPath, controllerName + ".cs"), GenerateController(className, modelName, ep));
-                File.WriteAllText(Path.Combine(viewFolder, className + ".cshtml"), GenerateView(modelName, ep));
+                File.WriteAllText(Path.Combine(viewFolder, className + ".cshtml"), GenerateView(modelName, ep, className));
             }
 
             File.WriteAllText(Path.Combine(sharedPath, "_Layout.cshtml"), "<!DOCTYPE html><html><body>@RenderBody()</body></html>");
@@ -107,14 +107,13 @@ namespace SwiftSpecBuild.Services
             File.WriteAllText(Path.Combine(_basePath, "appsettings.json"), "{ }");
 
             File.WriteAllText(Path.Combine(_basePath, "GeneratedWebApp.csproj"),
- @"<Project Sdk=""Microsoft.NET.Sdk.Web"">
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
-</Project>");
-
+                     @"<Project Sdk=""Microsoft.NET.Sdk.Web"">
+                      <PropertyGroup>
+                        <TargetFramework>net8.0</TargetFramework>
+                        <Nullable>enable</Nullable>
+                        <ImplicitUsings>enable</ImplicitUsings>
+                      </PropertyGroup>
+                    </Project>");
 
             string zipPath = Path.Combine(_basePath, "../GeneratedWebApp.zip");
             if (File.Exists(zipPath)) File.Delete(zipPath);
@@ -165,17 +164,15 @@ namespace SwiftSpecBuild.Services
             lines.Add("        return View();");
             lines.Add("    }");
 
-            // Add method to handle the actual operation (simulate Submit)
-            lines.Add("");
-            string handlerAction = action + "Submit";
+            // Post handler uses same action name (not Submit)
             string allParams = string.IsNullOrEmpty(paramList) ? $"{modelName} model" : $"{paramList}, {modelName} model";
             lines.Add($"    [HttpPost]");
-            lines.Add($"    public IActionResult {handlerAction}({allParams})");
+            lines.Add($"    public IActionResult {action}({allParams})");
             lines.Add("    {");
             lines.Add("        if (ModelState.IsValid)");
             lines.Add("        {");
             lines.Add("            return RedirectToAction(\"Success\", \"Home\");");
-            lines.Add("        }");
+            lines.Add("         }");
             lines.Add("        return View(model);");
             lines.Add("    }");
 
@@ -183,15 +180,17 @@ namespace SwiftSpecBuild.Services
             return string.Join(Environment.NewLine, lines);
         }
 
-        private string GenerateView(string modelName, ParsedEndpoint ep)
+        private string GenerateView(string modelName, ParsedEndpoint ep, string className)
         {
+            // string formAction = ep.OperationId;
+            string action = className;
             var lines = new List<string>
             {
                 $"@model {modelName}",
                 "",
                 $"<h2>{ep.Summary}</h2>",
                 $"<p>{ep.Description}</p>",
-                "<form method=\"post\">"
+                $"<form method=\"post\" asp-action=\"{action}\">"
             };
 
             foreach (var p in ep.Parameters)
