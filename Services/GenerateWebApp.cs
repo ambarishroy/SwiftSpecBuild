@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using SwiftSpecBuild.Models;
 
 namespace SwiftSpecBuild.Services
@@ -17,12 +18,12 @@ namespace SwiftSpecBuild.Services
 
         public string GenerateAndZip(List<ParsedEndpoint> endpoints)
         {
-            var modelsPath = Path.Combine(_basePath, "Models");
-            var controllersPath = Path.Combine(_basePath, "Controllers");
-            var viewsPath = Path.Combine(_basePath, "Views");
-            var sharedPath = Path.Combine(viewsPath, "Shared");
-            var homePath = Path.Combine(viewsPath, "Home");
-            var wwwrootPath = Path.Combine(_basePath, "wwwroot");
+            string modelsPath = Path.Combine(_basePath, "Models");
+            string controllersPath = Path.Combine(_basePath, "Controllers");
+            string viewsPath = Path.Combine(_basePath, "Views");
+            string sharedPath = Path.Combine(viewsPath, "Shared");
+            string homePath = Path.Combine(viewsPath, "Home");
+            string wwwrootPath = Path.Combine(_basePath, "wwwroot");
 
             Directory.CreateDirectory(modelsPath);
             Directory.CreateDirectory(controllersPath);
@@ -33,93 +34,88 @@ namespace SwiftSpecBuild.Services
 
             foreach (var ep in endpoints)
             {
-                string modelName = $"{ep.OperationId}Model";
-                string controllerName = $"{ep.OperationId}Controller";
-                string viewFolder = Path.Combine(viewsPath, ep.OperationId);
+                string className = ToPascal(ep.OperationId);
+                string modelName = className + "Model";
+                string controllerName = className + "Controller";
+                string viewFolder = Path.Combine(viewsPath, className);
                 Directory.CreateDirectory(viewFolder);
 
-                File.WriteAllText(Path.Combine(modelsPath, $"{modelName}.cs"), GenerateModel(modelName, ep.RequestBody));
-                File.WriteAllText(Path.Combine(controllersPath, $"{controllerName}.cs"), GenerateController(controllerName, modelName, ep));
-                File.WriteAllText(Path.Combine(viewFolder, $"{ep.OperationId}.cshtml"), GenerateView(modelName, ep));
+                File.WriteAllText(Path.Combine(modelsPath, modelName + ".cs"), GenerateModel(modelName, ep));
+                File.WriteAllText(Path.Combine(controllersPath, controllerName + ".cs"), GenerateController(className, modelName, ep));
+                File.WriteAllText(Path.Combine(viewFolder, className + ".cshtml"), GenerateView(modelName, ep));
             }
 
-            // Shared views and home
             File.WriteAllText(Path.Combine(sharedPath, "_Layout.cshtml"), "<!DOCTYPE html><html><body>@RenderBody()</body></html>");
             File.WriteAllText(Path.Combine(sharedPath, "_ViewStart.cshtml"), "@{ Layout = \"_Layout.cshtml\"; }");
-            File.WriteAllText(Path.Combine(homePath, "Success.cshtml"), "<h2>Action completed successfully.</h2>");
+            File.WriteAllText(Path.Combine(homePath, "Success.cshtml"), "<h2>Success</h2>");
 
-            // Home controller
-            File.WriteAllText(Path.Combine(controllersPath, "HomeController.cs"), """
-using Microsoft.AspNetCore.Mvc;
-public class HomeController : Controller
-{
-    public IActionResult Index() => Content("Welcome to your generated web app!");
-    public IActionResult Success() => View();
-}
-""");
+            File.WriteAllText(Path.Combine(controllersPath, "HomeController.cs"),
+                """
+                using Microsoft.AspNetCore.Mvc;
+                public class HomeController : Controller
+                {
+                    public IActionResult Index() => Content("Welcome to your generated web app!");
+                    public IActionResult Success() => View();
+                }
+                """);
 
-            // Program.cs and Startup.cs
-            File.WriteAllText(Path.Combine(_basePath, "Program.cs"), """
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Hosting;
+            File.WriteAllText(Path.Combine(_basePath, "Program.cs"),
+                """
+                using Microsoft.AspNetCore.Hosting;
+                using Microsoft.Extensions.Hosting;
 
-public class Program
-{
-    public static void Main(string[] args) =>
-        CreateHostBuilder(args).Build().Run();
+                public class Program
+                {
+                    public static void Main(string[] args) =>
+                        CreateHostBuilder(args).Build().Run();
 
-    public static IHostBuilder CreateHostBuilder(string[] args) =>
-        Host.CreateDefaultBuilder(args)
-            .ConfigureWebHostDefaults(webBuilder =>
-            {
-                webBuilder.UseStartup<Startup>();
-            });
-}
-""");
+                    public static IHostBuilder CreateHostBuilder(string[] args) =>
+                        Host.CreateDefaultBuilder(args)
+                            .ConfigureWebHostDefaults(webBuilder => webBuilder.UseStartup<Startup>());
+                }
+                """);
 
-            File.WriteAllText(Path.Combine(_basePath, "Startup.cs"), """
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+            File.WriteAllText(Path.Combine(_basePath, "Startup.cs"),
+                """
+                using Microsoft.AspNetCore.Builder;
+                using Microsoft.AspNetCore.Hosting;
+                using Microsoft.Extensions.DependencyInjection;
+                using Microsoft.Extensions.Hosting;
 
-public class Startup
-{
-    public void ConfigureServices(IServiceCollection services) =>
-        services.AddControllersWithViews();
+                public class Startup
+                {
+                    public void ConfigureServices(IServiceCollection services) =>
+                        services.AddControllersWithViews();
 
-    public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
-    {
-        if (env.IsDevelopment()) app.UseDeveloperExceptionPage();
-        else app.UseExceptionHandler("/Home/Error");
+                    public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+                    {
+                        if (env.IsDevelopment()) app.UseDeveloperExceptionPage();
+                        else app.UseExceptionHandler("/Home/Error");
 
-        app.UseStaticFiles();
-        app.UseRouting();
-        app.UseAuthorization();
+                        app.UseStaticFiles();
+                        app.UseRouting();
+                        app.UseAuthorization();
 
-        app.UseEndpoints(endpoints =>
-        {
-            endpoints.MapControllerRoute(
-                name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}");
-        });
-    }
-}
-""");
+                        app.UseEndpoints(endpoints =>
+                        {
+                            endpoints.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
+                        });
+                    }
+                }
+                """);
 
             File.WriteAllText(Path.Combine(_basePath, "appsettings.json"), "{ }");
 
-            File.WriteAllText(Path.Combine(_basePath, "GeneratedWebApp.csproj"), """
-<Project Sdk="Microsoft.NET.Sdk.Web">
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
-</Project>
-""");
+            File.WriteAllText(Path.Combine(_basePath, "GeneratedWebApp.csproj"),
+                @"<Project Sdk=""Microsoft.NET.Sdk.Web"">
+              <PropertyGroup>
+                <TargetFramework>net8.0</TargetFramework>
+                <Nullable>enable</Nullable>
+                <ImplicitUsings>enable</ImplicitUsings>
+              </PropertyGroup>
+            </Project>");
 
-            // Zip it
+
             string zipPath = Path.Combine(_basePath, "../GeneratedWebApp.zip");
             if (File.Exists(zipPath)) File.Delete(zipPath);
             ZipFile.CreateFromDirectory(_basePath, zipPath);
@@ -127,7 +123,7 @@ public class Startup
             return zipPath;
         }
 
-        private string GenerateModel(string modelName, Dictionary<string, string> props)
+        private string GenerateModel(string modelName, ParsedEndpoint ep)
         {
             var lines = new List<string>
             {
@@ -136,56 +132,59 @@ public class Startup
                 $"public class {modelName}",
                 "{"
             };
-            foreach (var prop in props)
-            {
-                lines.Add("    [Required]");
-                lines.Add($"    public {MapYamlTypeToCSharp(prop.Value)} {prop.Key} {{ get; set; }}");
-            }
+
+            foreach (var p in ep.Parameters)
+                lines.Add($"    [Required] public {MapType(p.Value)} {p.Key} {{ get; set; }}");
+
+            foreach (var p in ep.RequestBody)
+                lines.Add($"    [Required] public {MapType(p.Value)} {p.Key} {{ get; set; }}");
+
             lines.Add("}");
             return string.Join(Environment.NewLine, lines);
         }
 
-        private string GenerateController(string controllerName, string modelName, ParsedEndpoint ep)
+        private string GenerateController(string className, string modelName, ParsedEndpoint ep)
         {
             var lines = new List<string>
             {
                 "using Microsoft.AspNetCore.Mvc;",
                 "",
-                $"public class {controllerName} : Controller",
+                $"public class {className}Controller : Controller",
                 "{"
             };
 
-            // GET method with parameters
-            if (ep.HttpMethod == "GET")
+            string method = ep.HttpMethod.ToUpperInvariant();
+            string action = className;
+
+            if (method == "GET" || method == "DELETE")
             {
-                string paramList = string.Join(", ", ep.Parameters.Select(p => $"{MapYamlTypeToCSharp(p.Value)} {p.Key}"));
-                foreach (var param in ep.Parameters)
-                    lines.Add($"    public IActionResult {ep.OperationId}({paramList})");
+                string paramList = string.Join(", ", ep.Parameters.Select(p => $"{MapType(p.Value)} {p.Key}"));
+                lines.Add($"    [Http{ToPascal(method.ToLower())}]");
+
+                lines.Add($"    public IActionResult {action}({paramList})");
                 lines.Add("    {");
-                foreach (var param in ep.Parameters)
-                    lines.Add($"        ViewBag.{param.Key} = {param.Key};");
+                foreach (var p in ep.Parameters.Keys)
+                    lines.Add($"        ViewBag.{p} = {p};");
                 lines.Add("        return View();");
                 lines.Add("    }");
             }
-
-            // POST method
-            if (ep.HttpMethod == "POST")
+            else
             {
-                lines.AddRange(new[]
-                {
-                    $"    [HttpGet]",
-                    $"    public IActionResult {ep.OperationId}() => View();",
-                    "",
-                    $"    [HttpPost]",
-                    $"    public IActionResult {ep.OperationId}({modelName} model)",
-                    "    {",
-                    "        if (ModelState.IsValid)",
-                    "        {",
-                    "            return RedirectToAction(\"Success\", \"Home\");",
-                    "        }",
-                    "        return View(model);",
-                    "    }"
-                });
+                lines.Add($"    [HttpGet]");
+                lines.Add($"    public IActionResult {action}() => View();");
+                lines.Add("");
+                string paramList = string.Join(", ", ep.Parameters.Select(p => $"{MapType(p.Value)} {p.Key}"));
+                string allParams = string.IsNullOrEmpty(paramList) ? $"{modelName} model" : $"{paramList}, {modelName} model";
+                lines.Add($"    [Http{ToPascal(method.ToLower())}]");
+
+                lines.Add($"    public IActionResult {action}({allParams})");
+                lines.Add("    {");
+                lines.Add("        if (ModelState.IsValid)");
+                lines.Add("        {");
+                lines.Add("            return RedirectToAction(\"Success\", \"Home\");");
+                lines.Add("        }");
+                lines.Add("        return View(model);");
+                lines.Add("    }");
             }
 
             lines.Add("}");
@@ -203,43 +202,39 @@ public class Startup
                 "<form method=\"post\">"
             };
 
-            if (ep.HttpMethod == "GET")
+            foreach (var p in ep.Parameters)
             {
-                foreach (var param in ep.Parameters)
-                {
-                    lines.Add("    <div class=\"form-group\">");
-                    lines.Add($"        <label for=\"{param.Key}\">{param.Key}</label>");
-                    lines.Add($"        <input type=\"text\" name=\"{param.Key}\" class=\"form-control\" value=\"@ViewBag.{param.Key}\" />");
-                    lines.Add("    </div>");
-                }
-                lines.Add("    <button type=\"submit\" class=\"btn btn-primary\">Search</button>");
-            }
-            else
-            {
-                foreach (var prop in ep.RequestBody)
-                {
-                    lines.Add("    <div class=\"form-group\">");
-                    lines.Add($"        <label for=\"{prop.Key}\">{prop.Key}</label>");
-                    lines.Add($"        <input type=\"text\" name=\"{prop.Key}\" class=\"form-control\" required />");
-                    lines.Add("    </div>");
-                }
-                lines.Add("    <button type=\"submit\" class=\"btn btn-primary\">Submit</button>");
+                lines.Add($"    <label>{p.Key}</label>");
+                lines.Add($"    <input name=\"{p.Key}\" value=\"@ViewBag.{p.Key}\" class=\"form-control\" />");
             }
 
+            foreach (var f in ep.RequestBody)
+            {
+                lines.Add($"    <label>{f.Key}</label>");
+                lines.Add($"    <input name=\"{f.Key}\" class=\"form-control\" />");
+            }
+
+            lines.Add("    <button type=\"submit\" class=\"btn btn-primary\">Submit</button>");
             lines.Add("</form>");
             return string.Join(Environment.NewLine, lines);
         }
 
-        private string MapYamlTypeToCSharp(string yamlType)
+        private string MapType(string type)
         {
-            return yamlType switch
+            return type switch
             {
                 "integer" => "int",
                 "number" => "float",
                 "boolean" => "bool",
-                "string" => "string",
                 _ => "string"
             };
         }
+
+        private string ToPascal(string input)
+        {
+            return string.Join("", input.Split(new[] { '_', '-', '/' }, StringSplitOptions.RemoveEmptyEntries)
+                                        .Select(w => char.ToUpperInvariant(w[0]) + w.Substring(1).ToLower()));
+        }
+
     }
 }
