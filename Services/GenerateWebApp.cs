@@ -24,13 +24,19 @@ namespace SwiftSpecBuild.Services
             string sharedPath = Path.Combine(viewsPath, "Shared");
             string homePath = Path.Combine(viewsPath, "Home");
             string wwwrootPath = Path.Combine(_basePath, "wwwroot");
-
+            string rootPath = Path.GetFullPath(Path.Combine(_basePath, ".."));
+            string testProjectRoot = Path.Combine(_basePath, "TestsProject");
+            string slnPath = Path.Combine(_basePath, "GeneratedWebApp.sln");
+            string testsPath = Path.Combine(testProjectRoot, "Controllers");
+            
             Directory.CreateDirectory(modelsPath);
             Directory.CreateDirectory(controllersPath);
             Directory.CreateDirectory(viewsPath);
             Directory.CreateDirectory(sharedPath);
             Directory.CreateDirectory(homePath);
             Directory.CreateDirectory(wwwrootPath);
+            Directory.CreateDirectory(testProjectRoot);
+            Directory.CreateDirectory(testsPath);
 
             foreach (var ep in endpoints)
             {
@@ -42,11 +48,86 @@ namespace SwiftSpecBuild.Services
 
                 File.WriteAllText(Path.Combine(modelsPath, modelName + ".cs"), GenerateModel(modelName, ep));
                 File.WriteAllText(Path.Combine(controllersPath, controllerName + ".cs"), GenerateController(className, modelName, ep));
-                File.WriteAllText(Path.Combine(viewFolder, className + ".cshtml"), GenerateView(modelName, ep, className));
+                File.WriteAllText(Path.Combine(viewFolder, className + ".cshtml"), GenerateView(modelName, ep, className));                             
+                File.WriteAllText(Path.Combine(testsPath, className + "ControllerTests.cs"), GenerateUnitTest(className, modelName));
             }
+            File.WriteAllText(Path.Combine(testProjectRoot, "GeneratedWebApp.Tests.csproj"),
+              """
+             <Project Sdk="Microsoft.NET.Sdk">
+               <PropertyGroup>
+                 <TargetFramework>net8.0</TargetFramework>
+                 <IsPackable>false</IsPackable>
+                 <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+               </PropertyGroup>
 
-            File.WriteAllText(Path.Combine(sharedPath, "_Layout.cshtml"), "<!DOCTYPE html><html><body>@RenderBody()</body></html>");
-            File.WriteAllText(Path.Combine(sharedPath, "_ViewStart.cshtml"), "@{ Layout = \"_Layout.cshtml\"; }");
+               <ItemGroup>
+                 <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+                 <PackageReference Include="xunit" Version="2.4.2" />
+                 <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5" />
+                 <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.0" />
+               </ItemGroup>
+
+               <ItemGroup>
+                 <ProjectReference Include="..\\GeneratedWebApp.csproj" />
+               </ItemGroup>
+             </Project>
+             """);
+
+
+            File.WriteAllText(Path.Combine(sharedPath, "_Layout.cshtml"),
+                """
+               <!DOCTYPE html>
+               <html lang="en">
+               <head>
+                   <meta charset="utf-8" />
+                   <title>Generated Web App</title>
+                   <meta name="viewport" content="width=device-width, initial-scale=1" />
+                   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+               </head>
+               <body class="bg-light">
+                   <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+                       <div class="container-fluid">
+                           <a class="navbar-brand" href="/">SwiftSpecBuild</a>
+                           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                               <span class="navbar-toggler-icon"></span>
+                           </button>
+                           <div class="collapse navbar-collapse" id="navbarNav">
+                               <ul class="navbar-nav">
+                                   <li class="nav-item">
+                                       <a class="nav-link" href="/">Home</a>
+                                   </li>
+                                   @foreach (var action in ActionDescriptorCollectionProvider.ActionDescriptors.Items
+                                       .Where(a => a.RouteValues["controller"] != "Home"
+                                                && a.RouteValues["action"] != null
+                                                && a.RouteValues["action"] == a.RouteValues["controller"]))
+                                   {
+                                       var controller = action.RouteValues["controller"];
+                                       <li class="nav-item">
+                                           <a class="nav-link" href="/@controller">@controller</a>
+                                       </li>
+                                   }
+                               </ul>
+                           </div>
+                       </div>
+                   </nav>
+
+                   <main class="container my-4">
+                       @RenderBody()
+                   </main>
+
+                   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+               </body>
+               </html>
+               """);
+
+
+
+            File.WriteAllText(Path.Combine(viewsPath, "_ViewImports.cshtml"),
+              """
+             @using Microsoft.AspNetCore.Mvc.Infrastructure
+             @inject IActionDescriptorCollectionProvider ActionDescriptorCollectionProvider
+             """);
+
             File.WriteAllText(Path.Combine(homePath, "Success.cshtml"), "<h2>Success</h2>");
 
             File.WriteAllText(Path.Combine(controllersPath, "HomeController.cs"),
@@ -110,10 +191,41 @@ namespace SwiftSpecBuild.Services
                      @"<Project Sdk=""Microsoft.NET.Sdk.Web"">
                       <PropertyGroup>
                         <TargetFramework>net8.0</TargetFramework>
+                        <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
                         <Nullable>enable</Nullable>
                         <ImplicitUsings>enable</ImplicitUsings>
                       </PropertyGroup>
                     </Project>");
+            // string slnPath = Path.Combine(Path.GetDirectoryName(_basePath)!, "GeneratedWebApp.sln");
+
+
+            File.WriteAllText(slnPath,
+             """
+             Microsoft Visual Studio Solution File, Format Version 12.00
+             # Visual Studio Version 17
+             VisualStudioVersion = 17.8.33428.342
+             MinimumVisualStudioVersion = 10.0.40219.1
+             Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeneratedWebApp", "GeneratedWebApp.csproj", "{11111111-1111-1111-1111-111111111111}"
+             EndProject
+             Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeneratedWebApp.Tests", "TestsProject\\GeneratedWebApp.Tests.csproj", "{22222222-2222-2222-2222-222222222222}"
+             EndProject
+             Global
+                 GlobalSection(SolutionConfigurationPlatforms) = preSolution
+                     Debug|Any CPU = Debug|Any CPU
+                     Release|Any CPU = Release|Any CPU
+                 EndGlobalSection
+                 GlobalSection(ProjectConfigurationPlatforms) = postSolution
+                     {11111111-1111-1111-1111-111111111111}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+                     {11111111-1111-1111-1111-111111111111}.Debug|Any CPU.Build.0 = Debug|Any CPU
+                     {22222222-2222-2222-2222-222222222222}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+                     {22222222-2222-2222-2222-222222222222}.Debug|Any CPU.Build.0 = Debug|Any CPU
+                 EndGlobalSection
+                 GlobalSection(SolutionProperties) = preSolution
+                     HideSolutionNode = FALSE
+                 EndGlobalSection
+             EndGlobal
+             """);
+
 
             string zipPath = Path.Combine(_basePath, "../GeneratedWebApp.zip");
             if (File.Exists(zipPath)) File.Delete(zipPath);
@@ -205,31 +317,89 @@ namespace SwiftSpecBuild.Services
     {
         $"@model {modelName}",
         "",
-        $"<h2>{ep.Summary}</h2>",
-        $"<p>{ep.Description}</p>",
+        "<div class=\"container mt-5\">",
+        "    <div class=\"row justify-content-center\">",
+        "        <div class=\"col-md-8\">",
+        "            <div class=\"card shadow-sm\">",
+        "                <div class=\"card-header bg-primary text-white\">",
+        $"                    <h4 class=\"mb-0\">{ep.Summary}</h4>",
+        "                </div>",
+        "                <div class=\"card-body\">",
+        $"                    <p class=\"text-muted\">{ep.Description}</p>",
         "",
-        "@if (ViewBag.Message != null)",
-        "{",
-        "    <div class=\"alert alert-info\">@ViewBag.Message</div>",
-        "}",
+        "                    @if (ViewBag.Message != null)",
+        "                    {",
+        "                        var isSuccess = ViewBag.Message.ToString().Contains(\"succeeded\");",
+        "                        <div class=\"alert @(isSuccess ? \"alert-success\" : \"alert-danger\")\" role=\"alert\">",
+        "                            @ViewBag.Message",
+        "                        </div>",
+        "                    }",
         "",
-        $"<form method=\"post\" asp-action=\"{action}\">"
+        $"                    <form method=\"post\" asp-action=\"{action}\">"
     };
 
             foreach (var p in ep.Parameters)
             {
-                lines.Add($"    <label>{p.Key}</label>");
-                lines.Add($"    <input name=\"{p.Key}\" value=\"@ViewBag.{p.Key}\" class=\"form-control\" />");
+                lines.Add("                        <div class=\"mb-3\">");
+                lines.Add($"                            <label class=\"form-label\">{p.Key}</label>");
+                lines.Add($"                            <input type=\"text\" name=\"{p.Key}\" value=\"@ViewBag.{p.Key}\" class=\"form-control\" placeholder=\"Enter {p.Key}\" />");
+                lines.Add("                        </div>");
             }
 
             foreach (var f in ep.RequestBody)
             {
-                lines.Add($"    <label>{f.Key}</label>");
-                lines.Add($"    <input name=\"{f.Key}\" class=\"form-control\" />");
+                lines.Add("                        <div class=\"mb-3\">");
+                lines.Add($"                            <label class=\"form-label\">{f.Key}</label>");
+                lines.Add($"                            <input type=\"text\" name=\"{f.Key}\" class=\"form-control\" placeholder=\"Enter {f.Key}\" />");
+                lines.Add("                        </div>");
             }
 
-            lines.Add("    <button type=\"submit\" class=\"btn btn-primary\">Submit</button>");
-            lines.Add("</form>");
+            lines.Add("                        <button type=\"submit\" class=\"btn btn-success\">Submit</button>");
+            lines.Add("                    </form>");
+            lines.Add("                </div>");
+            lines.Add("            </div>");
+            lines.Add("        </div>");
+            lines.Add("    </div>");
+            lines.Add("</div>");
+
+            return string.Join(Environment.NewLine, lines);
+        }
+
+        private string GenerateUnitTest(string className, string modelName)
+        {
+            var lines = new List<string>
+    {
+        "using Xunit;",
+        "using Microsoft.AspNetCore.Mvc;",
+        "using GeneratedWebApp.Controllers;",
+        "using GeneratedWebApp.Models;",
+
+        "",
+        $"public class {className}ControllerTests",
+        "{",
+        $"    [Fact]",
+        $"    public void {className}_InvalidModelState_ReturnsViewWithModel()",
+        "    {",
+        $"        var controller = new {className}Controller();",
+        "        controller.ModelState.AddModelError(\"Key\", \"Error\");",
+        $"        var model = new {modelName}();",
+        $"        var result = controller.{className}(model);",
+        "        var viewResult = Assert.IsType<ViewResult>(result);",
+        "        Assert.Equal(model, viewResult.Model);",
+        "    }",
+        "",
+        $"    [Fact]",
+        $"    public void {className}_ValidModel_ShowsMessageInView()",
+        "    {",
+        $"        var controller = new {className}Controller();",
+        $"        var model = new {modelName}();",
+        $"        var result = controller.{className}(model);",
+        "        var viewResult = Assert.IsType<ViewResult>(result);",
+        "        Assert.NotNull(controller.ViewBag.Message);",
+        "    }",
+        "}"
+    };
+
             return string.Join(Environment.NewLine, lines);
         }
 
