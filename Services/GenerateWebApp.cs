@@ -145,17 +145,20 @@ namespace SwiftSpecBuild.Services
         private string GenerateController(string className, string modelName, ParsedEndpoint ep)
         {
             var lines = new List<string>
-            {
-                "using Microsoft.AspNetCore.Mvc;",
-                "",
-                $"public class {className}Controller : Controller",
-                "{"
-            };
+    {
+        "using Microsoft.AspNetCore.Mvc;",
+        "using System.Net.Http;",
+        "using System.Text;",
+        "using System.Text.Json;",
+        "",
+        $"public class {className}Controller : Controller",
+        "{"
+    };
 
             string action = className;
             string paramList = string.Join(", ", ep.Parameters.Select(p => $"{MapType(p.Value)} {p.Key}"));
 
-            // Always generate [HttpGet] view loader
+            // [HttpGet] view loader
             lines.Add("    [HttpGet]");
             lines.Add($"    public IActionResult {action}({paramList})");
             lines.Add("    {");
@@ -164,34 +167,54 @@ namespace SwiftSpecBuild.Services
             lines.Add("        return View();");
             lines.Add("    }");
 
-            // Post handler uses same action name (not Submit)
+            // [HttpPost] form handler with dynamic API call
             string allParams = string.IsNullOrEmpty(paramList) ? $"{modelName} model" : $"{paramList}, {modelName} model";
-            lines.Add($"    [HttpPost]");
+            lines.Add("    [HttpPost]");
             lines.Add($"    public IActionResult {action}({allParams})");
             lines.Add("    {");
             lines.Add("        if (ModelState.IsValid)");
             lines.Add("        {");
-            lines.Add("            return RedirectToAction(\"Success\", \"Home\");");
-            lines.Add("         }");
+            lines.Add("            using var client = new HttpClient();");
+            lines.Add($"            var apiUrl = \"{ep.Endpoint}\";");
+            lines.Add("            var json = JsonSerializer.Serialize(model);");
+            lines.Add("            var content = new StringContent(json, Encoding.UTF8, \"application/json\");");
+            lines.Add("            var response = client.PostAsync(apiUrl, content).Result;");
+            lines.Add("            if (response.IsSuccessStatusCode)");
+            lines.Add("            {");
+            lines.Add("                ViewBag.Message = \"API call succeeded.\";");
+            lines.Add("            }");
+            lines.Add("            else");
+            lines.Add("            {");
+            lines.Add("                var errorContent = response.Content.ReadAsStringAsync().Result;");
+            lines.Add("                ViewBag.Message = $\"API call failed with status {response.StatusCode}: {errorContent}\";");
+            lines.Add("            }");
+            lines.Add("        }");
             lines.Add("        return View(model);");
             lines.Add("    }");
+
 
             lines.Add("}");
             return string.Join(Environment.NewLine, lines);
         }
 
+
         private string GenerateView(string modelName, ParsedEndpoint ep, string className)
         {
-            // string formAction = ep.OperationId;
             string action = className;
             var lines = new List<string>
-            {
-                $"@model {modelName}",
-                "",
-                $"<h2>{ep.Summary}</h2>",
-                $"<p>{ep.Description}</p>",
-                $"<form method=\"post\" asp-action=\"{action}\">"
-            };
+    {
+        $"@model {modelName}",
+        "",
+        $"<h2>{ep.Summary}</h2>",
+        $"<p>{ep.Description}</p>",
+        "",
+        "@if (ViewBag.Message != null)",
+        "{",
+        "    <div class=\"alert alert-info\">@ViewBag.Message</div>",
+        "}",
+        "",
+        $"<form method=\"post\" asp-action=\"{action}\">"
+    };
 
             foreach (var p in ep.Parameters)
             {
@@ -209,6 +232,7 @@ namespace SwiftSpecBuild.Services
             lines.Add("</form>");
             return string.Join(Environment.NewLine, lines);
         }
+
 
         private string MapType(string type)
         {
