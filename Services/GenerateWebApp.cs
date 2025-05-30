@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -24,18 +25,21 @@ namespace SwiftSpecBuild.Services
             string sharedPath = Path.Combine(viewsPath, "Shared");
             string homePath = Path.Combine(viewsPath, "Home");
             string wwwrootPath = Path.Combine(_basePath, "wwwroot");
-            string rootPath = Path.GetFullPath(Path.Combine(_basePath, ".."));
-            string testProjectRoot = Path.Combine(_basePath, "TestsProject");
+            string rootPath = Path.GetDirectoryName(_basePath)!;
+            string testProjectRoot = Path.Combine(Path.GetDirectoryName(_basePath)!, "GeneratedWebApp.Tests");
+            Directory.CreateDirectory(testProjectRoot);
+
             string slnPath = Path.Combine(_basePath, "GeneratedWebApp.sln");
             string testsPath = Path.Combine(testProjectRoot, "Controllers");
-            
+
+
             Directory.CreateDirectory(modelsPath);
             Directory.CreateDirectory(controllersPath);
             Directory.CreateDirectory(viewsPath);
             Directory.CreateDirectory(sharedPath);
             Directory.CreateDirectory(homePath);
             Directory.CreateDirectory(wwwrootPath);
-            Directory.CreateDirectory(testProjectRoot);
+            
             Directory.CreateDirectory(testsPath);
 
             foreach (var ep in endpoints)
@@ -48,30 +52,45 @@ namespace SwiftSpecBuild.Services
 
                 File.WriteAllText(Path.Combine(modelsPath, modelName + ".cs"), GenerateModel(modelName, ep));
                 File.WriteAllText(Path.Combine(controllersPath, controllerName + ".cs"), GenerateController(className, modelName, ep));
-                File.WriteAllText(Path.Combine(viewFolder, className + ".cshtml"), GenerateView(modelName, ep, className));                             
-                File.WriteAllText(Path.Combine(testsPath, className + "ControllerTests.cs"), GenerateUnitTest(className, modelName));
+                File.WriteAllText(Path.Combine(viewFolder, className + ".cshtml"), GenerateView(modelName, ep, className));
+                
+
             }
-            File.WriteAllText(Path.Combine(testProjectRoot, "GeneratedWebApp.Tests.csproj"),
-              """
-             <Project Sdk="Microsoft.NET.Sdk">
-               <PropertyGroup>
-                 <TargetFramework>net8.0</TargetFramework>
-                 <IsPackable>false</IsPackable>
-                 <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-               </PropertyGroup>
+            new UnitTestGenerator(testProjectRoot).GenerateUnitTests(endpoints);
 
-               <ItemGroup>
-                 <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
-                 <PackageReference Include="xunit" Version="2.4.2" />
-                 <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5" />
-                 <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.0" />
-               </ItemGroup>
+            File.WriteAllText(Path.Combine(testProjectRoot, "GeneratedWebApp.Tests.csproj"), """
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5" />
+    <PackageReference Include="xunit.assert" Version="2.9.2" />
+    <PackageReference Include="xunit.extensibility.core" Version="2.9.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.15" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../GeneratedWebApp/GeneratedWebApp.csproj" />
+  </ItemGroup>
+</Project>
+""");
 
-               <ItemGroup>
-                 <ProjectReference Include="..\\GeneratedWebApp.csproj" />
-               </ItemGroup>
-             </Project>
-             """);
+
+            System.Diagnostics.Process.Start(new ProcessStartInfo
+            {
+                FileName = "dotnet",
+                Arguments = $"restore \"{slnPath}\"",
+                WorkingDirectory = Path.GetDirectoryName(slnPath),
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            })?.WaitForExit();
+
 
 
             File.WriteAllText(Path.Combine(sharedPath, "_Layout.cshtml"),
@@ -207,7 +226,7 @@ namespace SwiftSpecBuild.Services
              MinimumVisualStudioVersion = 10.0.40219.1
              Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeneratedWebApp", "GeneratedWebApp.csproj", "{11111111-1111-1111-1111-111111111111}"
              EndProject
-             Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeneratedWebApp.Tests", "TestsProject\\GeneratedWebApp.Tests.csproj", "{22222222-2222-2222-2222-222222222222}"
+             Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeneratedWebApp.Tests", "../GeneratedWebApp.Tests/GeneratedWebApp.Tests.csproj", "{22222222-2222-2222-2222-222222222222}"
              EndProject
              Global
                  GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -227,11 +246,35 @@ namespace SwiftSpecBuild.Services
              """);
 
 
-            string zipPath = Path.Combine(_basePath, "../GeneratedWebApp.zip");
+            
+            string zipPath = Path.Combine(rootPath, "GeneratedWebAppBundle.zip");
+
+            // Create a temp folder to hold both projects
+            string bundleRoot = Path.Combine(rootPath, "BundleTemp");
+            if (Directory.Exists(bundleRoot)) Directory.Delete(bundleRoot, true);
+            Directory.CreateDirectory(bundleRoot);
+
+            // Copy both folders into the bundle
+            CopyDirectory(_basePath, Path.Combine(bundleRoot, "GeneratedWebApp"));
+            CopyDirectory(Path.Combine(rootPath, "GeneratedWebApp.Tests"), Path.Combine(bundleRoot, "GeneratedWebApp.Tests"));
+
+            // Zip them together
             if (File.Exists(zipPath)) File.Delete(zipPath);
-            ZipFile.CreateFromDirectory(_basePath, zipPath);
+            ZipFile.CreateFromDirectory(bundleRoot, zipPath);
+
+            // Clean up
+            Directory.Delete(bundleRoot, true);
 
             return zipPath;
+
+        }
+        private void CopyDirectory(string sourceDir, string targetDir)
+        {
+            Directory.CreateDirectory(targetDir);
+            foreach (var file in Directory.GetFiles(sourceDir))
+                File.Copy(file, Path.Combine(targetDir, Path.GetFileName(file)));
+            foreach (var dir in Directory.GetDirectories(sourceDir))
+                CopyDirectory(dir, Path.Combine(targetDir, Path.GetFileName(dir)));
         }
 
         private string GenerateModel(string modelName, ParsedEndpoint ep)
@@ -240,6 +283,8 @@ namespace SwiftSpecBuild.Services
             {
                 "using System.ComponentModel.DataAnnotations;",
                 "",
+                "namespace GeneratedWebApp.Models",
+                "{",
                 $"public class {modelName}",
                 "{"
             };
@@ -251,6 +296,7 @@ namespace SwiftSpecBuild.Services
                 lines.Add($"    [Required] public {MapType(p.Value)} {p.Key} {{ get; set; }}");
 
             lines.Add("}");
+            lines.Add("}");
             return string.Join(Environment.NewLine, lines);
         }
 
@@ -258,11 +304,14 @@ namespace SwiftSpecBuild.Services
         {
             var lines = new List<string>
     {
+        "using GeneratedWebApp.Models;",
         "using Microsoft.AspNetCore.Mvc;",
         "using System.Net.Http;",
         "using System.Text;",
         "using System.Text.Json;",
         "",
+        "namespace GeneratedWebApp.Controllers",
+        "{",
         $"public class {className}Controller : Controller",
         "{"
     };
@@ -306,6 +355,7 @@ namespace SwiftSpecBuild.Services
 
 
             lines.Add("}");
+            lines.Add("}");
             return string.Join(Environment.NewLine, lines);
         }
 
@@ -315,7 +365,7 @@ namespace SwiftSpecBuild.Services
             string action = className;
             var lines = new List<string>
     {
-        $"@model {modelName}",
+        $"@model GeneratedWebApp.Models.{modelName}",
         "",
         "<div class=\"container mt-5\">",
         "    <div class=\"row justify-content-center\">",
