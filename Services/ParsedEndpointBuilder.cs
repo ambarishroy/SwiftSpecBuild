@@ -19,7 +19,16 @@ namespace SwiftSpecBuild.Services
             var root = (YamlMappingNode)yaml.Documents[0].RootNode;
             if (!root.Children.TryGetValue("paths", out var pathsRaw) || pathsRaw is not YamlMappingNode pathsNode)
                 return endpoints;
-
+            // Extract server URL from YAML
+            string serverUrl = "";
+            if (root.Children.TryGetValue("servers", out var serversNode) &&
+                serversNode is YamlSequenceNode serversList &&
+                serversList.Children.Count > 0 &&
+                serversList.Children[0] is YamlMappingNode firstServer &&
+                firstServer.Children.TryGetValue("url", out var urlNode))
+            {
+                serverUrl = ((YamlScalarNode)urlNode).Value;
+            }
             foreach (var pathEntry in pathsNode.Children)
             {
                 var path = ((YamlScalarNode)pathEntry.Key).Value;
@@ -43,6 +52,7 @@ namespace SwiftSpecBuild.Services
                         Summary = "",
                         Description = ""
                     };
+                    parsedEndpoint.Endpoint = $"{serverUrl?.TrimEnd('/')}{path}";
 
                     if (methodEntry.Value is not YamlMappingNode methodDetail) continue;
                     if (methodDetail.Children.TryGetValue("summary", out var summaryNode))
@@ -75,25 +85,59 @@ namespace SwiftSpecBuild.Services
                         contentNode is YamlMappingNode contentMap &&
                         contentMap.Children.TryGetValue("application/json", out var appJsonNode) &&
                         appJsonNode is YamlMappingNode jsonNode &&
-                        jsonNode.Children.TryGetValue("schema", out var schemaNode2) &&
-                        schemaNode2 is YamlMappingNode schemaMap2 &&
-                        schemaMap2.Children.TryGetValue("properties", out var propertiesNode) &&
-                        propertiesNode is YamlMappingNode propertiesMap)
+                        jsonNode.Children.TryGetValue("schema", out var schemaNode2))
                     {
-                        foreach (var prop in propertiesMap.Children)
+                        // Handle $ref to components
+                        if (schemaNode2 is YamlMappingNode refSchemaMap && refSchemaMap.Children.TryGetValue("$ref", out var refNode))
                         {
-                            var propName = ((YamlScalarNode)prop.Key).Value;
-                            var propType = "string";
-
-                            if (prop.Value is YamlMappingNode valNode &&
-                                valNode.Children.TryGetValue("type", out var typeNode))
+                            var refPath = ((YamlScalarNode)refNode).Value; // e.g., "#/components/schemas/UserRequest"
+                            var parts = refPath.Split('/');
+                            if (parts.Length == 4 &&
+                                parts[1] == "components" &&
+                                parts[2] == "schemas" &&
+                                root.Children.TryGetValue("components", out var componentsNode) &&
+                                componentsNode is YamlMappingNode componentsMap &&
+                                componentsMap.Children.TryGetValue("schemas", out var schemasNode) &&
+                                schemasNode is YamlMappingNode schemasMap &&
+                                schemasMap.Children.TryGetValue(parts[3], out var schemaDefNode) &&
+                                schemaDefNode is YamlMappingNode schemaDefMap &&
+                                schemaDefMap.Children.TryGetValue("properties", out var refPropsNode) &&
+                                refPropsNode is YamlMappingNode refPropsMap)
                             {
-                                propType = ((YamlScalarNode)typeNode).Value;
+                                foreach (var prop in refPropsMap.Children)
+                                {
+                                    var propName = ((YamlScalarNode)prop.Key).Value;
+                                    var propType = "string";
+                                    if (prop.Value is YamlMappingNode valNode &&
+                                        valNode.Children.TryGetValue("type", out var typeNode))
+                                    {
+                                        propType = ((YamlScalarNode)typeNode).Value;
+                                    }
+                                    parsedEndpoint.RequestBody[propName] = MapYamlTypeToCSharp(propType);
+                                }
                             }
+                        }
+                        // Handle inline properties
+                        else if (schemaNode2 is YamlMappingNode schemaMap2 &&
+                                 schemaMap2.Children.TryGetValue("properties", out var propertiesNode) &&
+                                 propertiesNode is YamlMappingNode propertiesMap)
+                        {
+                            foreach (var prop in propertiesMap.Children)
+                            {
+                                var propName = ((YamlScalarNode)prop.Key).Value;
+                                var propType = "string";
 
-                            parsedEndpoint.RequestBody[propName] = MapYamlTypeToCSharp(propType);
+                                if (prop.Value is YamlMappingNode valNode &&
+                                    valNode.Children.TryGetValue("type", out var typeNode))
+                                {
+                                    propType = ((YamlScalarNode)typeNode).Value;
+                                }
+
+                                parsedEndpoint.RequestBody[propName] = MapYamlTypeToCSharp(propType);
+                            }
                         }
                     }
+
 
                     // Parse responses > 200 > content > application/json > schema > properties
                     if (methodDetail.Children.TryGetValue("responses", out var responsesNode) &&
