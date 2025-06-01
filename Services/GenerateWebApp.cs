@@ -129,52 +129,70 @@ namespace SwiftSpecBuild.Services
             </Project>
             ");
 
+            var methodMap = endpoints
+             .GroupBy(e => e.HttpMethod.ToUpper())
+             .ToDictionary(
+                 g => g.Key,
+                g => g.Select(e => ToPascal(e.OperationId)).OrderBy(x => x).ToList()
+             );
 
-            File.WriteAllText(Path.Combine(sharedPath, "_Layout.cshtml"),
-                """
-               <!DOCTYPE html>
-               <html lang="en">
-               <head>
-                   <meta charset="utf-8" />
-                   <title>Generated Web App</title>
-                   <meta name="viewport" content="width=device-width, initial-scale=1" />
-                   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-               </head>
-               <body class="bg-light">
-                   <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-                       <div class="container-fluid">
-                           <a class="navbar-brand" href="/">SwiftSpecBuild</a>
-                           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                               <span class="navbar-toggler-icon"></span>
-                           </button>
-                           <div class="collapse navbar-collapse" id="navbarNav">
-                               <ul class="navbar-nav">
-                                   <li class="nav-item">
-                                       <a class="nav-link" href="/">Home</a>
-                                   </li>
-                                   @foreach (var action in ActionDescriptorCollectionProvider.ActionDescriptors.Items
-                                       .Where(a => a.RouteValues["controller"] != "Home"
-                                                && a.RouteValues["action"] != null
-                                                && a.RouteValues["action"] == a.RouteValues["controller"]))
-                                   {
-                                       var controller = action.RouteValues["controller"];
-                                       <li class="nav-item">
-                                           <a class="nav-link" href="/@controller">@controller</a>
-                                       </li>
-                                   }
-                               </ul>
-                           </div>
-                       </div>
-                   </nav>
+            var layoutLines = new List<string>
+            {
+                "<!DOCTYPE html>",
+                "<html lang=\"en\">",
+                "<head>",
+                "    <meta charset=\"utf-8\" />",
+                "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />",
+                "    <title>@ViewData[\"Title\"] - GeneratedWebApp</title>",
+                "    <link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css\" rel=\"stylesheet\" />",
+                "</head>",
+                "<body>",
+                "    <nav class=\"navbar navbar-expand-lg navbar-dark bg-primary shadow-sm\">",
+                "        <div class=\"container-fluid\">",
+                "            <a class=\"navbar-brand\" href=\"/\">Generated WebApp</a>",
+                "            <button class=\"navbar-toggler\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\"#navbarNav\">",
+                "                <span class=\"navbar-toggler-icon\"></span>",
+                "            </button>",
+                "            <div class=\"collapse navbar-collapse\" id=\"navbarNav\">",
+                "                <ul class=\"navbar-nav\">"
+            };
+            
+                        // build dropdowns
+                        foreach (var method in methodMap.Keys.OrderBy(m => m))
+                        {
+                            layoutLines.Add($"                    <li class=\"nav-item dropdown\">");
+                            layoutLines.Add($"                        <a class=\"nav-link dropdown-toggle\" href=\"#\" id=\"{method}\" role=\"button\" data-bs-toggle=\"dropdown\" aria-expanded=\"false\">{method}</a>");
+                            layoutLines.Add($"                        <ul class=\"dropdown-menu\" aria-labelledby=\"{method}\">");
+                            foreach (var op in methodMap[method])
+                            {
+                                layoutLines.Add($"                            <li><a class=\"dropdown-item\" href=\"/{op}/{op}\">{op}</a></li>");
+                            }
+                            layoutLines.Add("                        </ul>");
+                            layoutLines.Add("                    </li>");
+                        }
+            
+                        layoutLines.AddRange(new[]
+                        {
+                "                </ul>",
+                "            </div>",
+                "        </div>",
+                "    </nav>",
+                "    <main role=\"main\" class=\"pb-5\">",
+                "        @RenderBody()",
+                "    </main>",
+                "    <footer class=\"footer bg-light border-top py-3\">",
+                "        <div class=\"container text-center\">",
+                "            <span class=\"text-muted\">© @DateTime.Now.Year SwiftSpecBuild. All rights reserved.</span>",
+                "        </div>",
+                "    </footer>",
+                "    <script src=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js\"></script>",
+                "</body>",
+                "</html>"
+            });
+            
+            File.WriteAllText(Path.Combine(sharedPath, "_Layout.cshtml"), string.Join(Environment.NewLine, layoutLines));
 
-                   <main class="container my-4">
-                       @RenderBody()
-                   </main>
 
-                   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-               </body>
-               </html>
-               """);
 
 
 
@@ -184,7 +202,26 @@ namespace SwiftSpecBuild.Services
              @inject IActionDescriptorCollectionProvider ActionDescriptorCollectionProvider
              """);
 
-            File.WriteAllText(Path.Combine(homePath, "Success.cshtml"), "<h2>Success</h2>");
+            File.WriteAllText(Path.Combine(homePath, "Success.cshtml"),
+             """
+             @{
+                 ViewData["Title"] = "Submission Successful";
+             }
+
+             <div class="container py-5">
+                 <div class="row justify-content-center">
+                     <div class="col-md-8">
+                         <div class="alert alert-success shadow-lg text-center">
+                             <h4 class="alert-heading">🎉 Submission Successful!</h4>
+                             <p class="mb-3">Your request has been processed successfully.</p>
+                             <hr>
+                             <a href="/" class="btn btn-outline-primary">Go Back to Home</a>
+                         </div>
+                     </div>
+                 </div>
+             </div>
+             """);
+
 
             File.WriteAllText(Path.Combine(controllersPath, "HomeController.cs"),
                 """
@@ -409,17 +446,21 @@ namespace SwiftSpecBuild.Services
             var lines = new List<string>
     {
         $"@model GeneratedWebApp.Models.{modelName}",
+        "@{",
+        "    Layout = \"~/Views/Shared/_Layout.cshtml\";",
+        $"    ViewData[\"Title\"] = \"{ep.Summary}\";",
+        "}",
         "",
-        "<div class=\"container mt-5\">",
+        "<div class=\"container py-5\">",
         "    <div class=\"row justify-content-center\">",
-        "        <div class=\"col-md-8\">",
-        "            <div class=\"card shadow-sm\">",
+        "        <div class=\"col-lg-8 col-md-10\">",
+        "            <div class=\"card border-0 shadow\">",
         "                <div class=\"card-header bg-primary text-white\">",
-        $"                    <h4 class=\"mb-0\">{ep.Summary}</h4>",
+        $"                    <h3 class=\"mb-0\">{ep.Summary}</h3>",
         "                </div>",
         "                <div class=\"card-body\">",
-        $"                    <p class=\"text-muted\">{ep.Description}</p>",
-        "",
+        $"                    <p class=\"mb-4 text-muted\">{ep.Description}</p>",
+
         "                    @if (ViewBag.Message != null)",
         "                    {",
         "                        var isSuccess = ViewBag.Message.ToString().Contains(\"succeeded\");",
@@ -427,27 +468,29 @@ namespace SwiftSpecBuild.Services
         "                            @ViewBag.Message",
         "                        </div>",
         "                    }",
-        "",
-        $"                    <form method=\"post\" asp-action=\"{action}\">"
+
+        $"                    <form method=\"post\" asp-action=\"{action}\" novalidate>",
     };
 
             foreach (var p in ep.Parameters)
             {
                 lines.Add("                        <div class=\"mb-3\">");
-                lines.Add($"                            <label class=\"form-label\">{p.Key}</label>");
-                lines.Add($"                            <input type=\"text\" name=\"{p.Key}\" value=\"@ViewBag.{p.Key}\" class=\"form-control\" placeholder=\"Enter {p.Key}\" />");
+                lines.Add($"                            <label for=\"{p.Key}\" class=\"form-label\">{p.Key}</label>");
+                lines.Add($"                            <input type=\"text\" name=\"{p.Key}\" value=\"@ViewBag.{p.Key}\" class=\"form-control\" id=\"{p.Key}\" placeholder=\"Enter {p.Key}\" required>");
                 lines.Add("                        </div>");
             }
 
             foreach (var f in ep.RequestBody)
             {
                 lines.Add("                        <div class=\"mb-3\">");
-                lines.Add($"                            <label class=\"form-label\">{f.Key}</label>");
-                lines.Add($"                            <input type=\"text\" name=\"{f.Key}\" class=\"form-control\" placeholder=\"Enter {f.Key}\" />");
+                lines.Add($"                            <label for=\"{f.Key}\" class=\"form-label\">{f.Key}</label>");
+                lines.Add($"                            <input type=\"text\" name=\"{f.Key}\" class=\"form-control\" id=\"{f.Key}\" placeholder=\"Enter {f.Key}\" required>");
                 lines.Add("                        </div>");
             }
 
-            lines.Add("                        <button type=\"submit\" class=\"btn btn-success\">Submit</button>");
+            lines.Add("                        <div class=\"d-grid\">");
+            lines.Add("                            <button type=\"submit\" class=\"btn btn-success btn-lg\">Submit</button>");
+            lines.Add("                        </div>");
             lines.Add("                    </form>");
             lines.Add("                </div>");
             lines.Add("            </div>");
@@ -457,6 +500,8 @@ namespace SwiftSpecBuild.Services
 
             return string.Join(Environment.NewLine, lines);
         }
+
+
 
         private string MapType(string type)
         {
