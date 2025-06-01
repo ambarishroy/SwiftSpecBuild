@@ -28,6 +28,8 @@ namespace SwiftSpecBuild.Services
             string rootPath = Path.GetDirectoryName(_basePath)!;
             string testProjectRoot = Path.Combine(Path.GetDirectoryName(_basePath)!, "GeneratedWebApp.Tests");
             Directory.CreateDirectory(testProjectRoot);
+            string uiTestProjectRoot = Path.Combine(Path.GetDirectoryName(_basePath)!, "GeneratedWebApp.UITests");
+            Directory.CreateDirectory(uiTestProjectRoot);
 
             string slnPath = Path.Combine(_basePath, "GeneratedWebApp.sln");
             string testsPath = Path.Combine(testProjectRoot, "Controllers");
@@ -57,27 +59,47 @@ namespace SwiftSpecBuild.Services
 
             }
             new UnitTestGenerator(testProjectRoot).GenerateUnitTests(endpoints);
+            new UITestGenerator(uiTestProjectRoot).GenerateUITests(endpoints);
+
+            string propsDir = Path.Combine(_basePath, "Properties");
+            Directory.CreateDirectory(propsDir);
+
+            File.WriteAllText(Path.Combine(propsDir, "launchSettings.json"),
+            $@"
+            {{
+              ""profiles"": {{
+                ""GeneratedWebApp"": {{
+                  ""commandName"": ""Project"",
+                  ""dotnetRunMessages"": true,
+                  ""launchBrowser"": true,
+                  ""applicationUrl"": ""https://localhost:7010;http://localhost:5010"",
+                  ""environmentVariables"": {{
+                    ""ASPNETCORE_ENVIRONMENT"": ""Development""
+                  }}
+                }}
+              }}
+            }}");
 
             File.WriteAllText(Path.Combine(testProjectRoot, "GeneratedWebApp.Tests.csproj"), """
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <IsPackable>false</IsPackable>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
-    <PackageReference Include="xunit" Version="2.9.2" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5" />
-    <PackageReference Include="xunit.assert" Version="2.9.2" />
-    <PackageReference Include="xunit.extensibility.core" Version="2.9.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.15" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="../GeneratedWebApp/GeneratedWebApp.csproj" />
-  </ItemGroup>
-</Project>
-""");
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup>
+                <TargetFramework>net8.0</TargetFramework>
+                <IsPackable>false</IsPackable>
+                <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+              </PropertyGroup>
+              <ItemGroup>
+                <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+                <PackageReference Include="xunit" Version="2.9.2" />
+                <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5" />
+                <PackageReference Include="xunit.assert" Version="2.9.2" />
+                <PackageReference Include="xunit.extensibility.core" Version="2.9.2" />
+                <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.15" />
+              </ItemGroup>
+              <ItemGroup>
+                <ProjectReference Include="../GeneratedWebApp/GeneratedWebApp.csproj" />
+              </ItemGroup>
+            </Project>
+            """);
 
 
             System.Diagnostics.Process.Start(new ProcessStartInfo
@@ -91,6 +113,21 @@ namespace SwiftSpecBuild.Services
                 CreateNoWindow = true
             })?.WaitForExit();
 
+            File.WriteAllText(Path.Combine(uiTestProjectRoot, "GeneratedWebApp.UITests.csproj"), @"
+            <Project Sdk=""Microsoft.NET.Sdk"">
+              <PropertyGroup>
+                <TargetFramework>net8.0</TargetFramework>
+                <IsPackable>false</IsPackable>
+              </PropertyGroup>
+              <ItemGroup>
+                <PackageReference Include=""Microsoft.NET.Test.Sdk"" Version=""17.12.0"" />
+                <PackageReference Include=""xunit"" Version=""2.9.2"" />
+                <PackageReference Include=""xunit.runner.visualstudio"" Version=""2.4.5"" />
+                <PackageReference Include=""Selenium.WebDriver"" Version=""4.19.0"" />
+                <PackageReference Include=""Selenium.WebDriver.ChromeDriver"" Version=""136.0.0"" />
+              </ItemGroup>
+            </Project>
+            ");
 
 
             File.WriteAllText(Path.Combine(sharedPath, "_Layout.cshtml"),
@@ -228,6 +265,8 @@ namespace SwiftSpecBuild.Services
              EndProject
              Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeneratedWebApp.Tests", "../GeneratedWebApp.Tests/GeneratedWebApp.Tests.csproj", "{22222222-2222-2222-2222-222222222222}"
              EndProject
+             Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeneratedWebApp.UITests", "../GeneratedWebApp.UITests/GeneratedWebApp.UITests.csproj", "{33333333-3333-3333-3333-333333333333}"
+             EndProject
              Global
                  GlobalSection(SolutionConfigurationPlatforms) = preSolution
                      Debug|Any CPU = Debug|Any CPU
@@ -238,6 +277,8 @@ namespace SwiftSpecBuild.Services
                      {11111111-1111-1111-1111-111111111111}.Debug|Any CPU.Build.0 = Debug|Any CPU
                      {22222222-2222-2222-2222-222222222222}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
                      {22222222-2222-2222-2222-222222222222}.Debug|Any CPU.Build.0 = Debug|Any CPU
+                     {33333333-3333-3333-3333-333333333333}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+                     {33333333-3333-3333-3333-333333333333}.Debug|Any CPU.Build.0 = Debug|Any CPU
                  EndGlobalSection
                  GlobalSection(SolutionProperties) = preSolution
                      HideSolutionNode = FALSE
@@ -249,16 +290,18 @@ namespace SwiftSpecBuild.Services
             
             string zipPath = Path.Combine(rootPath, "GeneratedWebAppBundle.zip");
 
-            // Create a temp folder to hold both projects
+            // Temp folder
             string bundleRoot = Path.Combine(rootPath, "BundleTemp");
             if (Directory.Exists(bundleRoot)) Directory.Delete(bundleRoot, true);
             Directory.CreateDirectory(bundleRoot);
 
-            // Copy both folders into the bundle
+            // Copying webapp. unitTest and UITest in same folder
             CopyDirectory(_basePath, Path.Combine(bundleRoot, "GeneratedWebApp"));
             CopyDirectory(Path.Combine(rootPath, "GeneratedWebApp.Tests"), Path.Combine(bundleRoot, "GeneratedWebApp.Tests"));
+            CopyDirectory(Path.Combine(rootPath, "GeneratedWebApp.UITests"), Path.Combine(bundleRoot, "GeneratedWebApp.UITests"));
 
-            // Zip them together
+
+            // Zipping
             if (File.Exists(zipPath)) File.Delete(zipPath);
             ZipFile.CreateFromDirectory(bundleRoot, zipPath);
 
@@ -303,23 +346,23 @@ namespace SwiftSpecBuild.Services
         private string GenerateController(string className, string modelName, ParsedEndpoint ep)
         {
             var lines = new List<string>
-    {
-        "using GeneratedWebApp.Models;",
-        "using Microsoft.AspNetCore.Mvc;",
-        "using System.Net.Http;",
-        "using System.Text;",
-        "using System.Text.Json;",
-        "",
-        "namespace GeneratedWebApp.Controllers",
-        "{",
-        $"public class {className}Controller : Controller",
-        "{"
-    };
+            {
+                "using GeneratedWebApp.Models;",
+                "using Microsoft.AspNetCore.Mvc;",
+                "using System.Net.Http;",
+                "using System.Text;",
+                "using System.Text.Json;",
+                "",
+                "namespace GeneratedWebApp.Controllers",
+                "{",
+                $"public class {className}Controller : Controller",
+                "{"
+            };
 
             string action = className;
             string paramList = string.Join(", ", ep.Parameters.Select(p => $"{MapType(p.Value)} {p.Key}"));
 
-            // [HttpGet] view loader
+            // View loader httpget
             lines.Add("    [HttpGet]");
             lines.Add($"    public IActionResult {action}({paramList})");
             lines.Add("    {");
@@ -328,7 +371,7 @@ namespace SwiftSpecBuild.Services
             lines.Add("        return View();");
             lines.Add("    }");
 
-            // [HttpPost] form handler with dynamic API call
+            // handle form httpPost
             string allParams = string.IsNullOrEmpty(paramList) ? $"{modelName} model" : $"{paramList}, {modelName} model";
             lines.Add("    [HttpPost]");
             lines.Add($"    public IActionResult {action}({allParams})");
@@ -414,45 +457,6 @@ namespace SwiftSpecBuild.Services
 
             return string.Join(Environment.NewLine, lines);
         }
-
-        private string GenerateUnitTest(string className, string modelName)
-        {
-            var lines = new List<string>
-    {
-        "using Xunit;",
-        "using Microsoft.AspNetCore.Mvc;",
-        "using GeneratedWebApp.Controllers;",
-        "using GeneratedWebApp.Models;",
-
-        "",
-        $"public class {className}ControllerTests",
-        "{",
-        $"    [Fact]",
-        $"    public void {className}_InvalidModelState_ReturnsViewWithModel()",
-        "    {",
-        $"        var controller = new {className}Controller();",
-        "        controller.ModelState.AddModelError(\"Key\", \"Error\");",
-        $"        var model = new {modelName}();",
-        $"        var result = controller.{className}(model);",
-        "        var viewResult = Assert.IsType<ViewResult>(result);",
-        "        Assert.Equal(model, viewResult.Model);",
-        "    }",
-        "",
-        $"    [Fact]",
-        $"    public void {className}_ValidModel_ShowsMessageInView()",
-        "    {",
-        $"        var controller = new {className}Controller();",
-        $"        var model = new {modelName}();",
-        $"        var result = controller.{className}(model);",
-        "        var viewResult = Assert.IsType<ViewResult>(result);",
-        "        Assert.NotNull(controller.ViewBag.Message);",
-        "    }",
-        "}"
-    };
-
-            return string.Join(Environment.NewLine, lines);
-        }
-
 
         private string MapType(string type)
         {

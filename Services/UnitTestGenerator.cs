@@ -67,31 +67,34 @@ using Microsoft.AspNetCore.Mvc;
 using GeneratedWebApp.Controllers;
 using GeneratedWebApp.Models;
 
-public class {className}ControllerTests
+namespace GeneratedWebApp.Controllers.Tests
 {{
-{getTest}
-
-    [Fact]
-    public void {className}_InvalidModelState_ReturnsViewWithModel()
+    public class {className}ControllerTests
     {{
-        var controller = new {className}Controller();
-        controller.ModelState.AddModelError(""Key"", ""Error"");
-        {paramVars}
-        {modelInit}
-        var result = controller.{className}({callParams});
-        var viewResult = Assert.IsType<ViewResult>(result);
-        Assert.Equal(model, viewResult.Model);
-    }}
-
-    [Fact]
-    public void {className}_ValidModel_ShowsMessageInView()
-    {{
-        var controller = new {className}Controller();
-        {paramVars}
-        {modelInit}
-        var result = controller.{className}({callParams});
-        var viewResult = Assert.IsType<ViewResult>(result);
-        Assert.NotNull(controller.ViewBag.Message);
+    {getTest}
+    
+        [Fact]
+        public void {className}_InvalidModelState_ReturnsViewWithModel()
+        {{
+            var controller = new {className}Controller();
+            controller.ModelState.AddModelError(""Key"", ""Error"");
+            {paramVars}
+            {modelInit}
+            var result = controller.{className}({callParams});
+            var viewResult = Assert.IsType<ViewResult>(result);
+            Assert.Equal(model, viewResult.Model);
+        }}
+    
+        [Fact]
+        public void {className}_ValidModel_ShowsMessageInView()
+        {{
+            var controller = new {className}Controller();
+            {paramVars}
+            {modelInit}
+            var result = controller.{className}({callParams});
+            var viewResult = Assert.IsType<ViewResult>(result);
+            Assert.NotNull(controller.ViewBag.Message);
+        }}
     }}
 }}";
         }
