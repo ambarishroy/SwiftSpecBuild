@@ -92,19 +92,43 @@ namespace SwiftSpecBuild.Controllers
             if (isNewOrChanged)
             {
                 // Parse endpoints
-                var rawEndPoints = YamlParser.ExtractCrudEndpoints(tempFilePath);
-                var parsedEndpoints = ParsedEndpointBuilder.FromYaml(tempFilePath);
+               
+                var newParsedEndpoints = ParsedEndpointBuilder.FromYaml(tempFilePath);
+                var oldParsedEndpoints = existsInS3 ? ParsedEndpointBuilder.FromYaml(existingFilePath) : new List<ParsedEndpoint>();
+                var (added, removed, modified) = EndpointDiff.GetEndpointChanges(oldParsedEndpoints, newParsedEndpoints);
+
 
                 var outputPath = Path.Combine(Path.GetTempPath(), $"GeneratedWebApp_{Guid.NewGuid()}");
 
                 var generator = new GenerateWebApp(outputPath);
-                string zipFilePath = generator.GenerateAndZip(parsedEndpoints);
-               
+                
+
+                var changesToGenerate = added.Concat(modified).ToList();
+                foreach (var ep in removed)
+                {
+                    var name = ToPascal(ep.OperationId);
+                    var models = Path.Combine(outputPath, "Models", $"{name}Model.cs");
+                    var controller = Path.Combine(outputPath, "Controllers", $"{name}Controller.cs");
+                    var view = Path.Combine(outputPath, "Views", name, $"{name}.cshtml");
+                    var unitTest = Path.Combine(outputPath, "GeneratedWebApp.Tests", "Controllers", $"{name}ControllerTests.cs");
+
+                    var files = new[] { models, controller, view, unitTest };
+                    foreach (var f in files)
+                        if (System.IO.File.Exists(f)) System.IO.File.Delete(f);
+
+                    // Delete view folder if empty
+                    var viewFolder = Path.Combine(outputPath, "Views", name);
+                    if (Directory.Exists(viewFolder) && !Directory.EnumerateFileSystemEntries(viewFolder).Any())
+                    {
+                        Directory.Delete(viewFolder, true);
+                    }
+                }
 
 
+                string zipFilePath = generator.GenerateAndZip(changesToGenerate);
 
 
-                bool appGenerated = rawEndPoints.Count > 0; 
+                bool appGenerated = changesToGenerate.Count > 0; 
                 if (appGenerated)
                 {
                     
@@ -118,6 +142,20 @@ namespace SwiftSpecBuild.Controllers
                         ContentType = "application/x-yaml"
                     };
                     await s3.PutObjectAsync(putRequest);
+
+                    // Upload generated ZIP to S3
+                    var zipS3Key = $"{userEmail}/GeneratedWebApp.zip";
+                    using (var zipStream = new FileStream(zipFilePath, FileMode.Open, FileAccess.Read))
+                    {
+                        var putZipRequest = new PutObjectRequest
+                        {
+                            BucketName = bucketName,
+                            Key = zipS3Key,
+                            InputStream = zipStream,
+                            ContentType = "application/zip"
+                        };
+                        await s3.PutObjectAsync(putZipRequest);
+                    }
 
                     TempData["Message"] = "YAML uploaded and project generation complete!";
                     return PhysicalFile(zipFilePath, "application/zip", "GeneratedWebApp.zip");
@@ -135,5 +173,10 @@ namespace SwiftSpecBuild.Controllers
             if (System.IO.File.Exists(existingFilePath)) System.IO.File.Delete(existingFilePath);
             return RedirectToAction("Upload");
         }
+        private static string ToPascal(string input)
+        {
+            return System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(input).Replace("-", "").Replace("_", "").Replace(" ", "");
+        }
+
     }
 }

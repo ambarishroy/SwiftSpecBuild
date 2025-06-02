@@ -18,12 +18,36 @@ namespace SwiftSpecBuild.Services
         {
             string uiTestDir = Path.Combine(_testProjectRoot, "UITests");
             Directory.CreateDirectory(uiTestDir);
+                //clean up
+            foreach (var file in Directory.GetFiles(uiTestDir, "UITesting*.cs"))
+            {
+                try { File.Delete(file); } catch {  }
+            }
             string filePath = Path.Combine(uiTestDir, "UITesting.cs");
 
             var testCode = GenerateTestClass(endpoints);
-            File.WriteAllText(filePath, testCode);
+            int retries = 3;
+            while (retries-- > 0)
+            {
+                try
+                {
+                    if (File.Exists(filePath))
+                    {
+                        File.SetAttributes(filePath, FileAttributes.Normal);
+                        File.Delete(filePath);
+                    }
+                    File.WriteAllText(filePath, testCode);
+                    break;
+                }
+                catch (IOException)
+                {
+                    if (retries == 0) throw;
+                    System.Threading.Thread.Sleep(300);
+                }
+            }
 
-            
+
+
         }
 
         private string GenerateTestClass(List<ParsedEndpoint> endpoints)
@@ -86,8 +110,11 @@ namespace SwiftSpecBuild.Services
 
         private string ToPascal(string input)
         {
-            return string.Join("", input.Split(new[] { '_', '-', '/' }, System.StringSplitOptions.RemoveEmptyEntries)
-                                        .Select(w => char.ToUpperInvariant(w[0]) + w.Substring(1)));
+            return string.Join("",
+                input.Split(new[] { '_', '-', '/' }, StringSplitOptions.RemoveEmptyEntries)
+                     .Select(w => char.ToUpperInvariant(w[0]) + w.Substring(1))
+            );
         }
+
     }
 }

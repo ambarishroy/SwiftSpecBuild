@@ -352,7 +352,8 @@ namespace SwiftSpecBuild.Services
         {
             Directory.CreateDirectory(targetDir);
             foreach (var file in Directory.GetFiles(sourceDir))
-                File.Copy(file, Path.Combine(targetDir, Path.GetFileName(file)));
+                File.Copy(file, Path.Combine(targetDir, Path.GetFileName(file)), overwrite: true);
+
             foreach (var dir in Directory.GetDirectories(sourceDir))
                 CopyDirectory(dir, Path.Combine(targetDir, Path.GetFileName(dir)));
         }
@@ -516,8 +517,11 @@ namespace SwiftSpecBuild.Services
 
         private string ToPascal(string input)
         {
-            return string.Join("", input.Split(new[] { '_', '-', '/' }, StringSplitOptions.RemoveEmptyEntries)
-                                        .Select(w => char.ToUpperInvariant(w[0]) + w.Substring(1).ToLower()));
+            return string.Join("",
+                input.Split(new[] { '_', '-', '/' }, StringSplitOptions.RemoveEmptyEntries)
+                     .Select(w => char.ToUpperInvariant(w[0]) + w.Substring(1))
+            );
         }
+
     }
 }

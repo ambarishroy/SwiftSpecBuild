@@ -20,8 +20,36 @@ namespace SwiftSpecBuild.Services
         {
             string testControllersPath = Path.Combine(_testProjectRoot, "Controllers");
             Directory.CreateDirectory(testControllersPath);
+            // Clean up 
+            foreach (var file in Directory.GetFiles(testControllersPath, "*ControllerTests.cs"))
+            {
+                try { File.Delete(file); } catch {  }
+            }
+
             foreach (var file in Directory.GetFiles(testControllersPath, "*.cs"))
-                File.Delete(file);
+            {
+                int retries = 3;
+                while (retries-- > 0)
+                {
+                    try
+                    {
+                        File.SetAttributes(file, FileAttributes.Normal);
+                        File.Delete(file);
+                        break;
+                    }
+                    catch (IOException)
+                    {
+                        if (retries == 0) throw;
+                        System.Threading.Thread.Sleep(300);
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        if (retries == 0) throw;
+                        System.Threading.Thread.Sleep(300);
+                    }
+                }
+            }
+
             foreach (var ep in endpoints)
             {
                 string className = ToPascal(ep.OperationId);
@@ -103,8 +131,11 @@ namespace GeneratedWebApp.Controllers.Tests
 
         private string ToPascal(string input)
         {
-            return string.Join("", input.Split(new[] { '_', '-', '/' }, StringSplitOptions.RemoveEmptyEntries)
-                                        .Select(w => char.ToUpperInvariant(w[0]) + w.Substring(1)));
+            return string.Join("",
+                input.Split(new[] { '_', '-', '/' }, StringSplitOptions.RemoveEmptyEntries)
+                     .Select(w => char.ToUpperInvariant(w[0]) + w.Substring(1))
+            );
         }
+
     }
 }
