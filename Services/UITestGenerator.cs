@@ -61,6 +61,7 @@ namespace SwiftSpecBuild.Services
                 "using OpenQA.Selenium;",
                 "using OpenQA.Selenium.Chrome;",
                 "using Xunit;",
+                "using OpenQA.Selenium.Support.UI;",
                 "",
                 "namespace GeneratedWebApp.UITests",
                 "{",
@@ -93,11 +94,12 @@ namespace SwiftSpecBuild.Services
                 lines.Add($"            _driver.Navigate().GoToUrl($\"{{_baseUrl}}{urlPath}\");");
                 foreach (var field in parameters)
                 {
-                    lines.Add($"            _driver.FindElement(By.Name(\"{field}\"))" +
-                              $".SendKeys(\"sample-{field}\");");
+                    lines.Add($"            _driver.FindElement(By.Name(\"{SanitizeName(field)}\"))" +
+                              $".SendKeys(\"sample-{SanitizeName(field)}\");");
                 }
                 lines.Add("            _driver.FindElement(By.CssSelector(\"button[type='submit']\")).Click();");
-                lines.Add("            var message = _driver.FindElement(By.ClassName(\"alert\"));");
+                lines.Add("            var wait = new OpenQA.Selenium.Support.UI.WebDriverWait(_driver, TimeSpan.FromSeconds(5));");
+                lines.Add("            var message = wait.Until(driver => driver.FindElement(By.ClassName(\"alert\")));");
                 lines.Add("            Assert.NotNull(message);");
                 lines.Add("        }");
             }
@@ -114,6 +116,10 @@ namespace SwiftSpecBuild.Services
                 input.Split(new[] { '_', '-', '/' }, StringSplitOptions.RemoveEmptyEntries)
                      .Select(w => char.ToUpperInvariant(w[0]) + w.Substring(1))
             );
+        }
+        private string SanitizeName(string raw)
+        {
+            return raw.Replace("-", "_").Replace(" ", "_");
         }
 
     }

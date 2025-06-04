@@ -173,6 +173,43 @@ namespace SwiftSpecBuild.Controllers
             if (System.IO.File.Exists(existingFilePath)) System.IO.File.Delete(existingFilePath);
             return RedirectToAction("Upload");
         }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> DownloadZip([FromServices] S3Client s3Client, [FromServices] IHttpContextAccessor httpContextAccessor)
+        {
+            var idToken = httpContextAccessor.HttpContext.Request.Cookies["AuthToken"];
+            if (string.IsNullOrEmpty(idToken))
+            {
+                TempData["Message"] = "Auth token missing. Please log in again.";
+                return RedirectToAction("Login", "Registration");
+            }
+
+            var s3 = await s3Client.CreateS3ClientFromTokenAsync(idToken);
+
+            var userEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ??
+                            User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value ?? "anonymous";
+
+            var zipS3Key = $"{userEmail}/GeneratedWebApp.zip";
+            var bucketName = "yaml-uploads";
+
+            try
+            {
+                var response = await s3.GetObjectAsync(bucketName, zipS3Key);
+                var memoryStream = new MemoryStream(); // do NOT use `using` here
+                await response.ResponseStream.CopyToAsync(memoryStream);
+                memoryStream.Position = 0;
+
+                return File(memoryStream, "application/zip", "GeneratedWebApp.zip");
+            }
+            catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                TempData["Message"] = "No previously generated WebApp found for download.";
+                return RedirectToAction("Upload");
+            }
+        }
+
+
         private static string ToPascal(string input)
         {
             return System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(input).Replace("-", "").Replace("_", "").Replace(" ", "");

@@ -63,17 +63,17 @@ namespace SwiftSpecBuild.Services
         private string GenerateUnitTest(string className, string modelName, ParsedEndpoint ep)
         {
             var paramAssignments = ep.Parameters.Select(p =>
-                $"string {p.Key} = \"sample-{p.Key}\";");
+                $"string {SanitizeName(p.Key)} = \"sample-{SanitizeName(p.Key)}\";");
 
             var modelAssignments = ep.RequestBody.Select(p =>
-                $"{p.Key} = \"sample-{p.Key}\"");
+                $"{SanitizeName(p.Key)} = \"sample-{SanitizeName(p.Key)}\"");
 
             string paramVars = string.Join(Environment.NewLine + "        ", paramAssignments);
             string modelInit = modelAssignments.Any()
                 ? $"var model = new {modelName} {{ {string.Join(", ", modelAssignments)} }};"
                 : $"var model = new {modelName}();";
 
-            var paramNames = string.Join(", ", ep.Parameters.Keys);
+            var paramNames = string.Join(", ", ep.Parameters.Keys.Select(SanitizeName));
             string callParams = string.IsNullOrEmpty(paramNames) ? "model" : paramNames + ", model";
 
             string getTest = ep.HttpMethod == "GET"
@@ -135,6 +135,10 @@ namespace GeneratedWebApp.Controllers.Tests
                 input.Split(new[] { '_', '-', '/' }, StringSplitOptions.RemoveEmptyEntries)
                      .Select(w => char.ToUpperInvariant(w[0]) + w.Substring(1))
             );
+        }
+        private string SanitizeName(string raw)
+        {
+            return raw.Replace("-", "_").Replace(" ", "_");
         }
 
     }
