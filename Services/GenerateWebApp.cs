@@ -371,10 +371,11 @@ namespace SwiftSpecBuild.Services
             };
 
             foreach (var p in ep.Parameters)
-                lines.Add($"    [Required] public {MapType(p.Value)} {p.Key} {{ get; set; }}");
+                lines.Add($"    [Required] public {MapType(p.Value)} {SanitizeName(p.Key)} {{ get; set; }}");
+
 
             foreach (var p in ep.RequestBody)
-                lines.Add($"    [Required] public {MapType(p.Value)} {p.Key} {{ get; set; }}");
+                lines.Add($"    [Required] public {MapType(p.Value)} {SanitizeName(p.Key)} {{ get; set; }}");
 
             lines.Add("}");
             lines.Add("}");
@@ -398,14 +399,15 @@ namespace SwiftSpecBuild.Services
             };
 
             string action = className;
-            string paramList = string.Join(", ", ep.Parameters.Select(p => $"{MapType(p.Value)} {p.Key}"));
+            string paramList = string.Join(", ", ep.Parameters.Select(p => $"{MapType(p.Value)} {SanitizeName(p.Key)}"));
+
 
             // View loader httpget
             lines.Add("    [HttpGet]");
             lines.Add($"    public IActionResult {action}({paramList})");
             lines.Add("    {");
             foreach (var p in ep.Parameters.Keys)
-                lines.Add($"        ViewBag.{p} = {p};");
+                lines.Add($"        ViewBag.{SanitizeName(p)} = {SanitizeName(p)};");
             lines.Add("        return View();");
             lines.Add("    }");
 
@@ -417,7 +419,13 @@ namespace SwiftSpecBuild.Services
             lines.Add("        if (ModelState.IsValid)");
             lines.Add("        {");
             lines.Add("            using var client = new HttpClient();");
-            lines.Add($"            var apiUrl = \"{ep.Endpoint}\";");
+            string sanitizedEndpoint = ep.Endpoint;
+            foreach (var p in ep.Parameters.Keys)
+            {
+                sanitizedEndpoint = sanitizedEndpoint.Replace("{" + p + "}", "{" + SanitizeName(p) + "}");
+            }
+            lines.Add($"            var apiUrl = $\"{sanitizedEndpoint}\";");
+
             lines.Add("            var json = JsonSerializer.Serialize(model);");
             lines.Add("            var content = new StringContent(json, Encoding.UTF8, \"application/json\");");
             lines.Add("            var response = client.PostAsync(apiUrl, content).Result;");
@@ -473,13 +481,15 @@ namespace SwiftSpecBuild.Services
         $"                    <form method=\"post\" asp-action=\"{action}\" novalidate>",
     };
 
-            foreach (var p in ep.Parameters)
-            {
-                lines.Add("                        <div class=\"mb-3\">");
-                lines.Add($"                            <label for=\"{p.Key}\" class=\"form-label\">{p.Key}</label>");
-                lines.Add($"                            <input type=\"text\" name=\"{p.Key}\" value=\"@ViewBag.{p.Key}\" class=\"form-control\" id=\"{p.Key}\" placeholder=\"Enter {p.Key}\" required>");
-                lines.Add("                        </div>");
-            }
+                        foreach (var p in ep.Parameters)
+                        {
+                                lines.Add("    <div class=\"mb-3\">");
+                                lines.Add($"    <label for=\"{SanitizeName(p.Key)}\" class=\"form-label\">{SanitizeName(p.Key)}</label>");
+                                lines.Add($"    <input type=\"text\" name=\"{SanitizeName(p.Key)}\" value=\"@ViewBag.{SanitizeName(p.Key)}\" class=\"form-control\" id=\"{SanitizeName(p.Key)}\" placeholder=\"Enter {SanitizeName(p.Key)}\" required>");
+                                lines.Add("    </div>");
+                        }
+           
+
 
             foreach (var f in ep.RequestBody)
             {
@@ -522,6 +532,11 @@ namespace SwiftSpecBuild.Services
                      .Select(w => char.ToUpperInvariant(w[0]) + w.Substring(1))
             );
         }
+        private string SanitizeName(string raw)
+        {
+            return raw.Replace("-", "_").Replace(" ", "_");
+        }
+
 
     }
 }
