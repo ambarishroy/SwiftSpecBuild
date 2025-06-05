@@ -1,11 +1,10 @@
 ﻿@model YAMLUploadViewModel
 @{
     ViewData["Title"] = "Upload YAML File";
-
-   
 }
 
 <div class="container mt-5" style="max-width: 600px;">
+    <div class="bg-blur">
     <div class="card shadow-sm">
         <div class="card-body">
             <h3 class="card-title text-center mb-4">Upload Your API Specification</h3>
@@ -41,14 +40,19 @@
         </div>
         @if (User.Identity.IsAuthenticated)
         {
-            <div class="text-center mt-3">
+                <div class="d-grid mb-3">
                 <form method="get" asp-controller="Yaml" asp-action="DownloadZip">
-                    <button type="submit" class="btn btn-success">Download Previously Generated WebApp</button>
+                        <div class="text-center mt-3">
+                            <a href="/Yaml/DownloadZip" class="btn btn-success btn-sm">
+                                ⬇️ Download Previously Generated WebApp
+                            </a>
+                        </div>
+
                 </form>
             </div>
         }
 
-
+        </div>
     </div>
 </div>
 

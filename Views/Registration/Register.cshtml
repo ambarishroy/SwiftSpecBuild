@@ -1,32 +1,42 @@
 ﻿@model SwiftSpecBuild.Models.Authentication.RegisterViewModel
 @{
     ViewData["Title"] = "Register";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h2>Register</h2>
 
+<div class="container mt-5" style="max-width: 500px;">
+    <div class="bg-blur">
+        <div class="card shadow-sm">
+            <div class="card-body">
+        <h3 class="text-center mb-4">Create an Account</h3>
 @using (Html.BeginForm("Register", "Registration", FormMethod.Post))
 {
-    <div class="form-group">
+    <div class="form-group mb-3">
         @Html.LabelFor(m => m.Email)
-        @Html.TextBoxFor(m => m.Email, new { @class = "form-control", type = "email" })
+        @Html.TextBoxFor(m => m.Email, new { @class = "form-control", type = "email", @placeholder="Enter your Email" })
         @Html.ValidationMessageFor(m => m.Email, "", new { @class = "text-danger" })
     </div>
 
-    <div class="form-group">
+    <div class="form-group mb-3">
         @Html.LabelFor(m => m.Password)
-        @Html.PasswordFor(m => m.Password, new { @class = "form-control" })
+        @Html.PasswordFor(m => m.Password, new { @class = "form-control", @placeholder="Enter your password" })
         @Html.ValidationMessageFor(m => m.Password, "", new { @class = "text-danger" })
     </div>
 
-    <div class="form-group">
+    <div class="form-group mb-4">
         @Html.LabelFor(m => m.ConfirmPassword)
-        @Html.PasswordFor(m => m.ConfirmPassword, new { @class = "form-control" })
+        @Html.PasswordFor(m => m.ConfirmPassword, new { @class = "form-control", @placeholder = "Confirm password" })
         @Html.ValidationMessageFor(m => m.ConfirmPassword, "", new { @class = "text-danger" })
     </div>
-
-    <button type="submit" class="btn btn-primary">Register</button>
+    <div class="d-grid mb-3">
+        <button type="submit" class="btn btn-primary">Register</button>
+    </div>
 }
+            </div>
+        </div>
+    </div>
+</div>
 @section Scripts {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.3/dist/jquery.validate.min.js"></script>

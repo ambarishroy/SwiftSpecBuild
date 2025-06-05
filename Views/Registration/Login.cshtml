@@ -1,12 +1,16 @@
 ﻿@model SwiftSpecBuild.Models.Authentication.LoginViewModel
 @{
     ViewData["Title"] = "Login";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
 <div class="container mt-5" style="max-width: 500px;">
+    <div class="bg-blur">
     <div class="card shadow-sm">
         <div class="card-body">
-            <h3 class="card-title text-center mb-4">Welcome Back</h3>
+                @Html.ValidationSummary(true, "", new { @class = "alert alert-danger text-center" })
+
+            <h3 class="card-title text-center mb-4">Welcome !</h3>
 
             @if (TempData["Message"] != null)
             {
@@ -39,6 +43,7 @@
                 <span>Don't have an account? </span>
                 <a href="@Url.Action("Register", "Registration")">Register here</a>
             </div>
+        </div>
         </div>
     </div>
 </div>
