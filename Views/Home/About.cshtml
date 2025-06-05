@@ -1,0 +1,47 @@
+﻿@{
+    ViewData["Title"] = "About SwiftSpecBuild";
+}
+
+<div class="container py-5">
+    <div class="bg-blur">
+    <h1 class="display-5 fw-bold">About SwiftSpecBuild</h1>
+    <p class="lead mt-4">
+        SwiftSpecBuild is a powerful tool designed to help developers rapidly generate full-stack web applications
+        based on OpenAPI YAML documentation.
+    </p>
+    <p>
+        Just upload your API specification YAML file, and SwiftSpecBuild will:
+    </p>
+    <ul>
+        <li>Analyze all endpoints (GET, POST, PUT, PATCH, DELETE)</li>
+        <li>Generate corresponding Models, Controllers, and Views using .NET MVC</li>
+        <li>Create automated Unit Tests (XUnit) and UI Tests (Selenium)</li>
+        <li>Package everything into a downloadable zip that runs out of the box</li>
+    </ul
+     <h4 class="mt-5">Dynamic Update Feature</h4>
+    <p>
+        One of SwiftSpecBuild’s key strengths is its ability to dynamically detect changes in your YAML file.
+        When you upload a modified version:
+    </p>
+    <ul>
+        <li>The tool compares it with the previously uploaded version</li>
+        <li>Only the new or changed endpoints are parsed</li>
+        <li>Outdated components are removed or updated accordingly</li>
+        <li>A new project is generated and zipped, reflecting the latest API structure</li>
+    </ul>
+    <p>
+        This ensures that your application always stays in sync with your API documentation, saving hours of manual rework.
+    </p>
+    <p class="mt-3">
+        This tool is ideal for developers who want to:
+        <ul>
+            <li>Speed up the initial phase of full-stack app development</li>
+            <li>Maintain consistency across codebase and documentation</li>
+            <li>Focus more on logic and less on boilerplate</li>
+        </ul>
+    </p>
+    <p>
+        Built by <strong>Ambarish Roy</strong>, an avid developer
+    </p>
+    </div>
+</div>

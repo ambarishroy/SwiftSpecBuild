@@ -1,4 +1,6 @@
-﻿<!DOCTYPE html>
+﻿@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -6,50 +8,54 @@
     <title>@ViewData["Title"] - SwiftSpecBuild</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/SwiftSpecBuild.styles.css" asp-append-version="true" />
+
 </head>
 <body>
+    <!-- Navbar -->
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">SwiftSpecBuild</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
+        <nav class="navbar navbar-expand-lg navbar-dark shadow" style="background-color: #003366;">
+            <div class="container">
+                <a class="navbar-brand fw-bold" href="/">SwiftSpecBuild</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                            <a class="nav-link" href="/Registration/Register">Register</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                            <a class="nav-link" href="/Registration/Login">Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Home/About">About</a>
                         </li>
                     </ul>
                 </div>
             </div>
         </nav>
     </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
 
-    <footer class="border-top footer text-muted">
+    <!-- Page Content -->
+    <main role="main" class="pb-3">
         <div class="container">
-            &copy; 2025 - SwiftSpecBuild - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            @RenderBody()
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center text-lg-start border-top mt-5">
+
+        <div class="container text-center py-3">
+            <span>© 2025 - SwiftSpecBuild | Developed by <strong>Ambarish Roy</strong>, .NET Developer</span><br />
+           
+            <a href="https://www.linkedin.com/in/ambarish-roy-31231614b/" target="_blank">LinkedIn</a>
         </div>
     </footer>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
-    @await RenderSectionAsync("Scripts", required: false)
-    @section Scripts {
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.3/dist/jquery.validate.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/jquery-validation-unobtrusive@3.2.12/jquery.validate.unobtrusive.min.js"></script>
-    }
-
+    <script src="~/js/site.js"></script>
+    @RenderSection("Scripts", required: false)
 </body>
 </html>

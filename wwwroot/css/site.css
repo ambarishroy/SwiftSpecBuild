@@ -1,6 +1,9 @@
 html {
   font-size: 14px;
 }
+body {
+    outline: 5px solid lime;
+}
 
 @media (min-width: 768px) {
   html {
@@ -18,5 +21,41 @@ html {
 }
 
 body {
-  margin-bottom: 60px;
+    background: linear-gradient(135deg, #f5f9ff, #dce7f5);
+    min-height: 100vh;
+    background-attachment: fixed;
+    background-size: cover;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
 }
+
+    /* Optional: subtle dot pattern overlay */
+    body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 100%;
+        background-image: radial-gradient(#ccc 0.4px, transparent 0.4px);
+        background-size: 20px 20px;
+        opacity: 0.06;
+        z-index: -1;
+    }
+
+/* Optional: consistent card blur wrapper */
+.bg-blur {
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+header .navbar,
+footer {
+    background-color: rgba(0, 51, 102, 0.9); 
+    backdrop-filter: blur(4px);
+    color: white;
+}
+
+
