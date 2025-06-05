@@ -212,7 +212,7 @@ namespace SwiftSpecBuild.Services
                  <div class="row justify-content-center">
                      <div class="col-md-8">
                          <div class="alert alert-success shadow-lg text-center">
-                             <h4 class="alert-heading">🎉 Submission Successful!</h4>
+                             <h4 class="alert-heading">Submission Successful!</h4>
                              <p class="mb-3">Your request has been processed successfully.</p>
                              <hr>
                              <a href="/" class="btn btn-outline-primary">Go Back to Home</a>
@@ -429,15 +429,11 @@ namespace SwiftSpecBuild.Services
             lines.Add("            var json = JsonSerializer.Serialize(model);");
             lines.Add("            var content = new StringContent(json, Encoding.UTF8, \"application/json\");");
             lines.Add("            var response = client.PostAsync(apiUrl, content).Result;");
-            lines.Add("            if (response.IsSuccessStatusCode)");
-            lines.Add("            {");
-            lines.Add("                ViewBag.Message = \"API call succeeded.\";");
-            lines.Add("            }");
-            lines.Add("            else");
-            lines.Add("            {");
-            lines.Add("                var errorContent = response.Content.ReadAsStringAsync().Result;");
-            lines.Add("                ViewBag.Message = $\"API call failed with status {response.StatusCode}: {errorContent}\";");
-            lines.Add("            }");
+            lines.Add("            var responseBody = response.Content.ReadAsStringAsync().Result;");
+            lines.Add("            ViewBag.Message = response.IsSuccessStatusCode");
+            lines.Add("                ? $\" API call succeeded. Response: {responseBody}\"");
+            lines.Add("                : $\" API call failed with status {response.StatusCode}. Response: {responseBody}\";");
+
             lines.Add("        }");
             lines.Add("        return View(model);");
             lines.Add("    }");
@@ -474,7 +470,7 @@ namespace SwiftSpecBuild.Services
         "                    {",
         "                        var isSuccess = ViewBag.Message.ToString().Contains(\"succeeded\");",
         "                        <div class=\"alert @(isSuccess ? \"alert-success\" : \"alert-danger\")\" role=\"alert\">",
-        "                            @ViewBag.Message",
+        "                            <pre>@ViewBag.Message</pre>\r\n",
         "                        </div>",
         "                    }",
 
