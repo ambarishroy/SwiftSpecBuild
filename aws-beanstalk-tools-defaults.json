@@ -1,0 +1,20 @@
+
+{
+    "region" : "eu-west-1",
+    "configuration" : "Release",
+    "framework"     : "net9.0",
+    "self-contained" : false,
+    "application"    : "SwiftSpecBuild",
+    "environment"    : "SwiftSpecBuild-env",
+    "enable-xray"    : false,
+    "enhanced-health-type" : "enhanced",
+    "additional-options"   : "",
+    "solution-stack"       : "64bit Amazon Linux 2 v2.10.1 running .NET Core",
+    "environment-type"     : "SingleInstance",
+    "cname"                : "swiftspecbuild-prod",
+    "instance-type"        : "t3a.medium",
+    "key-pair"             : "",
+    "instance-profile"     : "aws-elasticbeanstalk-ec2-role",
+    "service-role"         : "aws-elasticbeanstalk-service-role",
+    "proxy-server"         : "nginx"
+}
