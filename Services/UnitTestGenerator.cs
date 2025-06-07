@@ -76,24 +76,26 @@ namespace SwiftSpecBuild.Services
             var paramNames = string.Join(", ", ep.Parameters.Keys.Select(SanitizeName));
             string callParams = string.IsNullOrEmpty(paramNames) ? "model" : paramNames + ", model";
 
-            string getTest = ep.HttpMethod == "GET"
-                ? $@"
-    [Fact]
-    public void {className}_Get_ReturnsView()
-    {{
-        var controller = new {className}Controller();
-        {paramVars}
-        var result = controller.{className}({paramNames});
-        var viewResult = Assert.IsType<ViewResult>(result);
-        Assert.NotNull(viewResult);
-    }}"
-                : "";
+            string getTest = $@"
+        [Fact]
+        public void {className}_Get_ReturnsView()
+        {{
+            var mockHttpService = new Mock<HttpService>(new HttpClient());
+            var controller = new {className}Controller(mockHttpService.Object);
+            {paramVars}
+            var result = controller.{className}({paramNames});
+            var viewResult = Assert.IsType<ViewResult>(result);
+            Assert.NotNull(viewResult);
+        }}";
 
             return $@"
 using Xunit;
 using Microsoft.AspNetCore.Mvc;
 using GeneratedWebApp.Controllers;
 using GeneratedWebApp.Models;
+using Moq;
+using System.Net.Http;
+using GeneratedWebApp.Services;
 
 namespace GeneratedWebApp.Controllers.Tests
 {{
@@ -104,7 +106,8 @@ namespace GeneratedWebApp.Controllers.Tests
         [Fact]
         public void {className}_InvalidModelState_ReturnsViewWithModel()
         {{
-            var controller = new {className}Controller();
+            var mockHttpService = new Mock<HttpService>(new HttpClient());
+            var controller = new {className}Controller(mockHttpService.Object);
             controller.ModelState.AddModelError(""Key"", ""Error"");
             {paramVars}
             {modelInit}
@@ -116,7 +119,14 @@ namespace GeneratedWebApp.Controllers.Tests
         [Fact]
         public void {className}_ValidModel_ShowsMessageInView()
         {{
-            var controller = new {className}Controller();
+            var mockHttpService = new Mock<HttpService>(new HttpClient());
+            mockHttpService.Setup(x => x.PostJson(It.IsAny<string>(), It.IsAny<{modelName}>(), out It.Ref<string>.IsAny))
+                .Returns((string url, {modelName} m, out string r) => {{
+                    r = ""mock-response"";
+                    return ""API call succeeded. Response: mock-response"";
+                }});
+            
+            var controller = new {className}Controller(mockHttpService.Object);
             {paramVars}
             {modelInit}
             var result = controller.{className}({callParams});
@@ -126,6 +136,7 @@ namespace GeneratedWebApp.Controllers.Tests
     }}
 }}";
         }
+
 
 
 

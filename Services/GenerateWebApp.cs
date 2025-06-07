@@ -94,6 +94,8 @@ namespace SwiftSpecBuild.Services
                 <PackageReference Include="xunit.assert" Version="2.9.2" />
                 <PackageReference Include="xunit.extensibility.core" Version="2.9.2" />
                 <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.15" />
+                <PackageReference Include="Moq" Version="4.20.72" />
+            
               </ItemGroup>
               <ItemGroup>
                 <ProjectReference Include="../GeneratedWebApp/GeneratedWebApp.csproj" />
@@ -191,6 +193,40 @@ namespace SwiftSpecBuild.Services
             });
             
             File.WriteAllText(Path.Combine(sharedPath, "_Layout.cshtml"), string.Join(Environment.NewLine, layoutLines));
+            string servicesPath = Path.Combine(_basePath, "Services");
+            Directory.CreateDirectory(servicesPath);
+
+            File.WriteAllText(Path.Combine(servicesPath, "HttpService.cs"),
+            """
+            using System.Net.Http;
+            using System.Text;
+            using System.Text.Json;
+            
+            namespace GeneratedWebApp.Services
+            {
+                public class HttpService
+                {
+                    private readonly HttpClient _httpClient;
+            
+                    public HttpService(HttpClient httpClient)
+                    {
+                        _httpClient = httpClient;
+                    }
+            
+                    public virtual string PostJson<T>(string apiUrl, T model, out string responseBody)
+                    {
+                        var json = JsonSerializer.Serialize(model);
+                        var content = new StringContent(json, Encoding.UTF8, "application/json");
+                        var response = _httpClient.PostAsync(apiUrl, content).Result;
+                        responseBody = response.Content.ReadAsStringAsync().Result;
+            
+                        return response.IsSuccessStatusCode
+                            ? $" API call succeeded. Response: {responseBody}"
+                            : $" API call failed with status {response.StatusCode}. Response: {responseBody}";
+                    }
+                }
+            }
+            """);
 
 
 
@@ -257,6 +293,7 @@ namespace SwiftSpecBuild.Services
 
             File.WriteAllText(Path.Combine(_basePath, "Startup.cs"),
                 """
+                using GeneratedWebApp.Services;
                 using Microsoft.AspNetCore.Builder;
                 using Microsoft.AspNetCore.Hosting;
                 using Microsoft.Extensions.DependencyInjection;
@@ -266,9 +303,12 @@ namespace SwiftSpecBuild.Services
                 {
                     public class Startup
                     {
-                        public void ConfigureServices(IServiceCollection services) =>
+                        public void ConfigureServices(IServiceCollection services)
+                        {
                             services.AddControllersWithViews();
-
+                            services.AddHttpClient();
+                            services.AddScoped<HttpService>();
+                        }
                         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
                         {
                             if (env.IsDevelopment()) app.UseDeveloperExceptionPage();
@@ -394,23 +434,25 @@ namespace SwiftSpecBuild.Services
         private string GenerateController(string className, string modelName, ParsedEndpoint ep)
         {
             var lines = new List<string>
-            {
-                "using GeneratedWebApp.Models;",
-                "using Microsoft.AspNetCore.Mvc;",
-                "using System.Net.Http;",
-                "using System.Text;",
-                "using System.Text.Json;",
-                "",
-                "namespace GeneratedWebApp.Controllers",
-                "{",
-                $"public class {className}Controller : Controller",
-                "{",
-                " private static readonly HttpClient _httpClient = new HttpClient();"
-            };
+    {
+        "using GeneratedWebApp.Models;",
+        "using GeneratedWebApp.Services;",
+        "using Microsoft.AspNetCore.Mvc;",
+        "",
+        "namespace GeneratedWebApp.Controllers",
+        "{",
+        $"public class {className}Controller : Controller",
+        "{",
+        "    private readonly HttpService _httpService;",
+        "",
+        $"    public {className}Controller(HttpService httpService)",
+        "    {",
+        "        _httpService = httpService;",
+        "    }"
+    };
 
             string action = className;
             string paramList = string.Join(", ", ep.Parameters.Select(p => $"{MapType(p.Value)} {SanitizeName(p.Key)}"));
-
 
             // View loader httpget
             lines.Add("    [HttpGet]");
@@ -428,7 +470,7 @@ namespace SwiftSpecBuild.Services
             lines.Add("    {");
             lines.Add("        if (ModelState.IsValid)");
             lines.Add("        {");
-            
+
             string sanitizedEndpoint = ep.Endpoint;
             foreach (var p in ep.Parameters.Keys)
             {
@@ -436,23 +478,18 @@ namespace SwiftSpecBuild.Services
             }
             lines.Add($"            var apiUrl = $\"{sanitizedEndpoint}\";");
 
-            lines.Add("            var json = JsonSerializer.Serialize(model);");
-            lines.Add("            var content = new StringContent(json, Encoding.UTF8, \"application/json\");");
-            lines.Add("            var response = _httpClient.PostAsync(apiUrl, content).Result;");
-            lines.Add("            var responseBody = response.Content.ReadAsStringAsync().Result;");
-            lines.Add("            ViewBag.Message = response.IsSuccessStatusCode");
-            lines.Add("                ? $\" API call succeeded. Response: {responseBody}\"");
-            lines.Add("                : $\" API call failed with status {response.StatusCode}. Response: {responseBody}\";");
+            lines.Add("            string responseBody;");
+            lines.Add("            ViewBag.Message = _httpService.PostJson(apiUrl, model, out responseBody);");
 
             lines.Add("        }");
             lines.Add("        return View(model);");
             lines.Add("    }");
 
-
             lines.Add("}");
             lines.Add("}");
             return string.Join(Environment.NewLine, lines);
         }
+
 
 
         private string GenerateView(string modelName, ParsedEndpoint ep, string className)
