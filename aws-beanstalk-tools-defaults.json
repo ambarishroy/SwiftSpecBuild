@@ -1,7 +1,7 @@
 
 {
     "region" : "eu-west-1",
-    "configuration" : "Release",
+    "configuration" : "Debug",
     "framework"     : "net9.0",
     "self-contained" : false,
     "application"    : "SwiftSpecBuild",
