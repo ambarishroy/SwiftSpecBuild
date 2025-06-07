@@ -226,10 +226,13 @@ namespace SwiftSpecBuild.Services
             File.WriteAllText(Path.Combine(controllersPath, "HomeController.cs"),
                 """
                 using Microsoft.AspNetCore.Mvc;
-                public class HomeController : Controller
+                namespace GeneratedWebApp.Controllers
                 {
-                    public IActionResult Index() => Content("Welcome to your generated web app!");
-                    public IActionResult Success() => View();
+                    public class HomeController : Controller
+                    {
+                        public IActionResult Index() => Content("Welcome to your generated web app!");
+                        public IActionResult Success() => View();
+                    }
                 }
                 """);
 
@@ -238,14 +241,17 @@ namespace SwiftSpecBuild.Services
                 using Microsoft.AspNetCore.Hosting;
                 using Microsoft.Extensions.Hosting;
 
-                public class Program
+                namespace GeneratedWebApp
                 {
-                    public static void Main(string[] args) =>
-                        CreateHostBuilder(args).Build().Run();
+                    public class Program
+                    {
+                        public static void Main(string[] args) =>
+                            CreateHostBuilder(args).Build().Run();
 
-                    public static IHostBuilder CreateHostBuilder(string[] args) =>
-                        Host.CreateDefaultBuilder(args)
-                            .ConfigureWebHostDefaults(webBuilder => webBuilder.UseStartup<Startup>());
+                        public static IHostBuilder CreateHostBuilder(string[] args) =>
+                            Host.CreateDefaultBuilder(args)
+                                .ConfigureWebHostDefaults(webBuilder => webBuilder.UseStartup<Startup>());
+                    }
                 }
                 """);
 
@@ -256,24 +262,27 @@ namespace SwiftSpecBuild.Services
                 using Microsoft.Extensions.DependencyInjection;
                 using Microsoft.Extensions.Hosting;
 
-                public class Startup
+                namespace GeneratedWebApp
                 {
-                    public void ConfigureServices(IServiceCollection services) =>
-                        services.AddControllersWithViews();
-
-                    public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+                    public class Startup
                     {
-                        if (env.IsDevelopment()) app.UseDeveloperExceptionPage();
-                        else app.UseExceptionHandler("/Home/Error");
+                        public void ConfigureServices(IServiceCollection services) =>
+                            services.AddControllersWithViews();
 
-                        app.UseStaticFiles();
-                        app.UseRouting();
-                        app.UseAuthorization();
-
-                        app.UseEndpoints(endpoints =>
+                        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
                         {
-                            endpoints.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
-                        });
+                            if (env.IsDevelopment()) app.UseDeveloperExceptionPage();
+                            else app.UseExceptionHandler("/Home/Error");
+
+                            app.UseStaticFiles();
+                            app.UseRouting();
+                            app.UseAuthorization();
+
+                            app.UseEndpoints(endpoints =>
+                            {
+                                endpoints.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
+                            });
+                        }
                     }
                 }
                 """);
@@ -395,7 +404,8 @@ namespace SwiftSpecBuild.Services
                 "namespace GeneratedWebApp.Controllers",
                 "{",
                 $"public class {className}Controller : Controller",
-                "{"
+                "{",
+                " private static readonly HttpClient _httpClient = new HttpClient();"
             };
 
             string action = className;
@@ -418,7 +428,7 @@ namespace SwiftSpecBuild.Services
             lines.Add("    {");
             lines.Add("        if (ModelState.IsValid)");
             lines.Add("        {");
-            lines.Add("            using var client = new HttpClient();");
+            
             string sanitizedEndpoint = ep.Endpoint;
             foreach (var p in ep.Parameters.Keys)
             {
@@ -428,7 +438,7 @@ namespace SwiftSpecBuild.Services
 
             lines.Add("            var json = JsonSerializer.Serialize(model);");
             lines.Add("            var content = new StringContent(json, Encoding.UTF8, \"application/json\");");
-            lines.Add("            var response = client.PostAsync(apiUrl, content).Result;");
+            lines.Add("            var response = _httpClient.PostAsync(apiUrl, content).Result;");
             lines.Add("            var responseBody = response.Content.ReadAsStringAsync().Result;");
             lines.Add("            ViewBag.Message = response.IsSuccessStatusCode");
             lines.Add("                ? $\" API call succeeded. Response: {responseBody}\"");
