@@ -1,8 +1,39 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Generate Web Application from YAML - SwiftSpecBuild";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<section class="hero text-center py-5" style="background: linear-gradient(to right, #0f2027, #203a43, #2c5364); color: white;">
+    <div class="container">
+        <h1 class="display-4 fw-bold">Instantly Generate Web Applications from Your YAML API Specification</h1>
+        <p class="lead mt-3">Upload your OpenAPI (Swagger) YAML file and get a complete ASP.NET Core web application with XUnit & Selenium tests – automatically generated in seconds.</p>
+        <a href="/Yaml/Upload" class="btn btn-lg btn-primary mt-4">Upload Your YAML</a>
+    </div>
+</section>
+
+<section class="features py-5">
+    <div class="container text-center">
+        <h2 class="mb-4">Why Choose SwiftSpecBuild?</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <h4>🛠 End-to-End Generation</h4>
+                <p>Generate Models, Views, Controllers, and test suites all in one go.</p>
+            </div>
+            <div class="col-md-4">
+                <h4>⚡ Lightning Fast</h4>
+                <p>Your complete .NET Core MVC project is ready within seconds of upload.</p>
+            </div>
+            <div class="col-md-4">
+                <h4>✅ Built-in Testing</h4>
+                <p>Includes auto-generated XUnit and Selenium test cases for quality assurance.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="cta text-center py-5 bg-light">
+    <div class="container">
+        <h2 class="mb-3">Start Building Now</h2>
+        <p>Boost your development speed by letting SwiftSpecBuild do the heavy lifting.</p>
+        <a href="/Yaml/Upload" class="btn btn-success btn-lg">Upload YAML File</a>
+    </div>
+</section>
