@@ -58,6 +58,8 @@ namespace SwiftSpecBuild.Services
                 string testFilePath = Path.Combine(testControllersPath, className + "ControllerTests.cs");
                 File.WriteAllText(testFilePath, testFileContent);
             }
+            GenerateHttpServiceTest(Path.Combine(_testProjectRoot, "Services"));
+
         }
 
         private string GenerateUnitTest(string className, string modelName, ParsedEndpoint ep)
@@ -137,6 +139,50 @@ namespace GeneratedWebApp.Controllers.Tests
 }}";
         }
 
+        private void GenerateHttpServiceTest(string servicesTestPath)
+        {
+            Directory.CreateDirectory(servicesTestPath);
+            string content = """
+using Xunit;
+using System.Net.Http;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
+using GeneratedWebApp.Services;
+
+namespace GeneratedWebApp.Services.Tests
+{
+    public class HttpServiceTests
+    {
+        [Fact]
+        public void PostJson_ReturnsSuccessResponse()
+        {
+            var httpClient = new HttpClient(new FakeHandler());
+            var service = new HttpService(httpClient);
+            var model = new { name = "test" };
+
+            var result = service.PostJson("https://fake-url.com", model, out string responseBody);
+
+            Assert.Contains("succeeded", result);
+            Assert.Equal("{\"status\":\"ok\"}", responseBody);
+        }
+
+        private class FakeHandler : HttpMessageHandler
+        {
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"status\":\"ok\"}")
+                });
+            }
+        }
+    }
+}
+""";
+
+            File.WriteAllText(Path.Combine(servicesTestPath, "HttpServiceTests.cs"), content);
+        }
 
 
 

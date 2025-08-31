@@ -48,6 +48,7 @@ builder.Services.AddTransient<S3Client>();
 builder.Services.AddAuthorization();
 builder.Services.AddControllersWithViews();
 
+//Comment below line to debug
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
 builder.WebHost.UseUrls($"http://*:{port}");
 
