@@ -126,7 +126,7 @@ namespace SwiftSpecBuild.Services
                 <PackageReference Include=""xunit"" Version=""2.9.2"" />
                 <PackageReference Include=""xunit.runner.visualstudio"" Version=""2.4.5"" />
                 <PackageReference Include=""Selenium.WebDriver"" Version=""4.19.0"" />
-                <PackageReference Include=""Selenium.WebDriver.ChromeDriver"" Version=""136.0.0"" />
+                <PackageReference Include=""Selenium.WebDriver.ChromeDriver"" Version=""139.0.7258.6600"" />
               </ItemGroup>
             </Project>
             ");
@@ -163,7 +163,7 @@ namespace SwiftSpecBuild.Services
                         foreach (var method in methodMap.Keys.OrderBy(m => m))
                         {
                             layoutLines.Add($"                    <li class=\"nav-item dropdown\">");
-                            layoutLines.Add($"                        <a class=\"nav-link dropdown-toggle\" href=\"#\" id=\"{method}\" role=\"button\" data-bs-toggle=\"dropdown\" aria-expanded=\"false\">{method}</a>");
+                            layoutLines.Add($"                        <button class=\"nav-link dropdown-toggle\" href=\"#\" id=\"{method}\" role=\"button\" data-bs-toggle=\"dropdown\" aria-expanded=\"false\">{method}</button>");
                             layoutLines.Add($"                        <ul class=\"dropdown-menu\" aria-labelledby=\"{method}\">");
                             foreach (var op in methodMap[method])
                             {
